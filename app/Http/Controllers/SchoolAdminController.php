@@ -615,15 +615,60 @@ class SchoolAdminController extends Controller
 
     // ==================== BUS FEES ====================
     
-    /**
-     * Bus fees page.
+/**
+     * Bus fees page with pagination.
      */
-    public function busFees()
+    public function busFees(Request $request)
     {
         $schoolId = auth()->user()->school_id;
-        $fees = BusFee::where('school_id', $schoolId)->get();
+        
+        $query = BusFee::where('school_id', $schoolId);
+        
+        // Search filter
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('destination', 'like', '%' . $search . '%')
+                  ->orWhere('price', 'like', '%' . $search . '%');
+            });
+        }
+        
+        // Status filter
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+        
+        $fees = $query->orderBy('id', 'desc')->paginate(10);
         
         return view('school-admin.fees.bus-fees', compact('fees'));
+    }
+
+    /**
+     * Search bus fees (AJAX).
+     */
+    public function searchBusFees(Request $request)
+    {
+        $schoolId = auth()->user()->school_id;
+        
+        $query = BusFee::where('school_id', $schoolId);
+        
+        // Search filter
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('destination', 'like', '%' . $search . '%')
+                  ->orWhere('price', 'like', '%' . $search . '%');
+            });
+        }
+        
+        // Status filter
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+        
+        $fees = $query->orderBy('id', 'desc')->paginate(10);
+        
+        return response()->json($fees);
     }
 
     /**

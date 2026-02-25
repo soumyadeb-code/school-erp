@@ -33,6 +33,29 @@
         </div>
     </div>
     <div class="card-body">
+        <!-- Search and Filter Section -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by destination or price..." value="{{ request('search') }}">
+                    <button class="btn btn-primary" type="button" onclick="applyFilters()">Search</button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select id="statusFilter" class="form-select" onchange="applyFilters()">
+                    <option value="">All Status</option>
+                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
+                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-secondary" type="button" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+        </div>
+
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
@@ -48,7 +71,7 @@
         @endif
 
         <div class="table-responsive">
-            <table class="table table-bordered table-striped">
+            <table class="table table-bordered table-striped" id="busFeesTable">
                 <thead>
                     <tr>
                         <th>Destination</th>
@@ -57,7 +80,7 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="busFeesTableBody">
                     @forelse($fees as $fee)
                         <tr>
                             <td>{{ $fee->destination }}</td>
@@ -87,6 +110,16 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">
+                Showing {{ $fees->firstItem() ?? 0 }} to {{ $fees->lastItem() ?? 0 }} of {{ $fees->total() }} entries
+            </div>
+            <div>
+                {{ $fees->appends(request()->query())->links() }}
+            </div>
         </div>
     </div>
 </div>
@@ -144,7 +177,7 @@
                         <small class="text-muted">Supported formats: .xlsx, .xls, .csv</small>
                     </div>
                     <div class="alert alert-info">
-                        <strong>Excel Format:</strong> Columns should be: Destination, Price, Status
+                        <strong>Excel Format:</strong> Columns should be: Destination, Price
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -160,5 +193,33 @@
 function exportBusFees() {
     window.location.href = '{{ route("school-admin.fees.bus.export") }}';
 }
+
+function applyFilters() {
+    const search = document.getElementById('searchInput').value;
+    const status = document.getElementById('statusFilter').value;
+    
+    let url = '{{ route("school-admin.fees.bus") }}?';
+    const params = [];
+    
+    if (search) {
+        params.push('search=' + encodeURIComponent(search));
+    }
+    if (status) {
+        params.push('status=' + encodeURIComponent(status));
+    }
+    
+    window.location.href = url + params.join('&');
+}
+
+function clearFilters() {
+    window.location.href = '{{ route("school-admin.fees.bus") }}';
+}
+
+// Handle Enter key for search
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        applyFilters();
+    }
+});
 </script>
 @endsection

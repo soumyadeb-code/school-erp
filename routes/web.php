@@ -127,7 +127,8 @@ Route::get('/fees/bus', [SchoolAdminController::class, 'busFees'])->name('fees.b
         Route::put('/fees/bus/{busFee}', [SchoolAdminController::class, 'updateBusFee'])->name('fees.bus.update');
         Route::delete('/fees/bus/{busFee}', [SchoolAdminController::class, 'destroyBusFee'])->name('fees.bus.destroy');
         Route::post('/fees/bus/import', [SchoolAdminController::class, 'importBusFees'])->name('fees.bus.import');
-        Route::get('/fees/bus/export', [SchoolAdminController::class, 'exportBusFees'])->name('fees.bus.export');
+Route::get('/fees/bus/export', [SchoolAdminController::class, 'exportBusFees'])->name('fees.bus.export');
+        Route::get('/fees/bus/search', [SchoolAdminController::class, 'searchBusFees'])->name('fees.bus.search');
         
         Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->name('fees.bookset');
         Route::post('/fees/bookset', [SchoolAdminController::class, 'storeBooksetPrice'])->name('fees.bookset.store');
