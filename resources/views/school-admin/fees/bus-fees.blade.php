@@ -38,15 +38,14 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" id="searchInput" class="form-control" placeholder="Search by destination or price..." value="{{ request('search') }}">
-                    <button class="btn btn-primary" type="button" onclick="applyFilters()">Search</button>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by destination or price...">
                 </div>
             </div>
             <div class="col-md-3">
-                <select id="statusFilter" class="form-select" onchange="applyFilters()">
+                <select id="statusFilter" class="form-select">
                     <option value="">All Status</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
-                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -81,44 +80,18 @@
                     </tr>
                 </thead>
                 <tbody id="busFeesTableBody">
-                    @forelse($fees as $fee)
-                        <tr>
-                            <td>{{ $fee->destination }}</td>
-                            <td>₹{{ number_format($fee->price, 2) }}</td>
-                            <td>
-                                <span class="badge bg-{{ $fee->status == 'active' ? 'success' : 'secondary' }}">
-                                    {{ ucfirst($fee->status) }}
-                                </span>
-                            </td>
-                            <td>
-                                <a href="{{ route('school-admin.fees.bus.edit', $fee->id) }}" class="btn btn-sm btn-warning">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ route('school-admin.fees.bus.destroy', $fee->id) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="text-center">No bus fees configured yet.</td>
-                        </tr>
-                    @endforelse
+                    <!-- Data will be loaded via AJAX -->
                 </tbody>
             </table>
         </div>
 
         <!-- Pagination -->
         <div class="d-flex justify-content-between align-items-center mt-3">
-            <div class="text-muted">
-                Showing {{ $fees->firstItem() ?? 0 }} to {{ $fees->lastItem() ?? 0 }} of {{ $fees->total() }} entries
+            <div class="text-muted" id="paginationInfo">
+                Showing 0 to 0 of 0 entries
             </div>
-            <div>
-                {{ $fees->appends(request()->query())->links() }}
+            <div id="paginationLinks">
+                <!-- Pagination will be loaded via AJAX -->
             </div>
         </div>
     </div>
@@ -190,36 +163,129 @@
 </div>
 
 <script>
-function exportBusFees() {
-    window.location.href = '{{ route("school-admin.fees.bus.export") }}';
-}
+let searchTimeout = null;
 
-function applyFilters() {
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    loadBusFees();
+    
+    // Real-time search on keyup
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            loadBusFees(1);
+        }, 300); // 300ms delay for debounce
+    });
+    
+    // Status filter change
+    document.getElementById('statusFilter').addEventListener('change', function() {
+        loadBusFees(1);
+    });
+});
+
+function loadBusFees(page = 1) {
     const search = document.getElementById('searchInput').value;
     const status = document.getElementById('statusFilter').value;
     
-    let url = '{{ route("school-admin.fees.bus") }}?';
-    const params = [];
+    const url = '{{ route("school-admin.fees.bus.search") }}?' + 
+        'page=' + page + 
+        '&search=' + encodeURIComponent(search) + 
+        '&status=' + encodeURIComponent(status);
     
-    if (search) {
-        params.push('search=' + encodeURIComponent(search));
-    }
-    if (status) {
-        params.push('status=' + encodeURIComponent(status));
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            updateTable(data);
+        })
+        .catch(error => {
+            console.error('Error loading bus fees:', error);
+        });
+}
+
+function updateTable(data) {
+    const tbody = document.getElementById('busFeesTableBody');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const paginationLinks = document.getElementById('paginationLinks');
+    
+    if (data.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No bus fees found.</td></tr>';
+        paginationInfo.textContent = 'Showing 0 to 0 of 0 entries';
+        paginationLinks.innerHTML = '';
+        return;
     }
     
-    window.location.href = url + params.join('&');
+    let html = '';
+    data.data.forEach(fee => {
+        const statusClass = fee.status === 'active' ? 'success' : 'secondary';
+        const editUrl = '{{ route("school-admin.fees.bus.edit", ":id") }}'.replace(':id', fee.id);
+        const deleteUrl = '{{ route("school-admin.fees.bus.destroy", ":id") }}'.replace(':id', fee.id);
+        
+        html += `
+            <tr>
+                <td>${fee.destination}</td>
+                <td>₹${parseFloat(fee.price).toFixed(2)}</td>
+                <td><span class="badge bg-${statusClass}">${fee.status.charAt(0).toUpperCase() + fee.status.slice(1)}</span></td>
+                <td>
+                    <a href="${editUrl}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
+                    <form action="${deleteUrl}" method="POST" class="d-inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+    
+    // Update pagination info
+    paginationInfo.textContent = `Showing ${data.from} to ${data.to} of ${data.total} entries`;
+    
+    // Update pagination links
+    paginationLinks.innerHTML = buildPagination(data);
+}
+
+function buildPagination(data) {
+    let html = '<nav><ul class="pagination mb-0">';
+    
+    // Previous page
+    if (data.prev_page_url) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadBusFees(${data.current_page - 1}); return false;">Previous</a></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link">Previous</span></li>`;
+    }
+    
+    // Page numbers
+    for (let i = 1; i <= data.last_page; i++) {
+        if (i === data.current_page) {
+            html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+        } else {
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="loadBusFees(${i}); return false;">${i}</a></li>`;
+        }
+    }
+    
+    // Next page
+    if (data.next_page_url) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadBusFees(${data.current_page + 1}); return false;">Next</a></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link">Next</span></li>`;
+    }
+    
+    html += '</ul></nav>';
+    return html;
 }
 
 function clearFilters() {
-    window.location.href = '{{ route("school-admin.fees.bus") }}';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    loadBusFees(1);
 }
 
-// Handle Enter key for search
-document.getElementById('searchInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        applyFilters();
-    }
-});
+function exportBusFees() {
+    window.location.href = '{{ route("school-admin.fees.bus.export") }}';
+}
 </script>
 @endsection
