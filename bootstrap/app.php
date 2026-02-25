@@ -17,16 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'maintenance' => \App\Http\Middleware\CheckMaintenanceMode::class,
         ]);
         
-        // Ensure web middleware group includes CSRF and session
+// Ensure web middleware group includes CSRF and session
         $middleware->web([
             \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-        ]);
-        
-        // Add maintenance check middleware to all web routes
-        $middleware->middlewarePriority([
-            \App\Http\Middleware\CheckMaintenanceMode::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

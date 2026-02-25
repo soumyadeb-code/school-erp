@@ -335,6 +335,58 @@ class SchoolAdminController extends Controller
         return redirect()->back()->with('success', 'Admission fee created successfully.');
     }
 
+    /**
+     * Edit admission fee form.
+     */
+    public function editAdmissionFee(AdmissionFee $admissionFee)
+    {
+        $this->authorizeSchool($admissionFee);
+        
+        $schoolId = auth()->user()->school_id;
+        $academicYears = AcademicYear::where('school_id', $schoolId)->orderBy('year', 'desc')->get();
+        
+        return view('school-admin.fees.admission-edit', compact('admissionFee', 'academicYears'));
+    }
+
+    /**
+     * Update admission fee.
+     */
+    public function updateAdmissionFee(Request $request, AdmissionFee $admissionFee)
+    {
+        $this->authorizeSchool($admissionFee);
+        
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:0',
+            'admission_start_date' => 'nullable|date',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $admissionFee->update([
+            'amount' => $request->amount,
+            'admission_start_date' => $request->admission_start_date,
+            'status' => $request->status,
+        ]);
+
+        return redirect()->back()->with('success', 'Admission fee updated successfully.');
+    }
+
+    /**
+     * Delete admission fee.
+     */
+    public function destroyAdmissionFee(AdmissionFee $admissionFee)
+    {
+        $this->authorizeSchool($admissionFee);
+        $admissionFee->delete();
+        
+        return redirect()->back()->with('success', 'Admission fee deleted successfully.');
+    }
+
     // ==================== REGISTRATION FEES ====================
     
     /**
@@ -395,6 +447,58 @@ class SchoolAdminController extends Controller
         return redirect()->back()->with('success', 'Registration fee created successfully.');
     }
 
+    /**
+     * Edit registration fee form.
+     */
+    public function editRegistrationFee(RegistrationFee $registrationFee)
+    {
+        $this->authorizeSchool($registrationFee);
+        
+        $schoolId = auth()->user()->school_id;
+        $years = AcademicYear::where('school_id', $schoolId)->orderBy('year', 'desc')->get();
+        
+        return view('school-admin.fees.registration-fees-edit', compact('registrationFee', 'years'));
+    }
+
+    /**
+     * Update registration fee.
+     */
+    public function updateRegistrationFee(Request $request, RegistrationFee $registrationFee)
+    {
+        $this->authorizeSchool($registrationFee);
+        
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:0',
+            'registration_start_date' => 'nullable|date',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $registrationFee->update([
+            'amount' => $request->amount,
+            'registration_start_date' => $request->registration_start_date,
+            'status' => $request->status,
+        ]);
+
+        return redirect()->back()->with('success', 'Registration fee updated successfully.');
+    }
+
+    /**
+     * Delete registration fee.
+     */
+    public function destroyRegistrationFee(RegistrationFee $registrationFee)
+    {
+        $this->authorizeSchool($registrationFee);
+        $registrationFee->delete();
+        
+        return redirect()->back()->with('success', 'Registration fee deleted successfully.');
+    }
+
     // ==================== CLASS FEES ====================
     
     /**
@@ -452,6 +556,20 @@ class SchoolAdminController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Class fee created successfully.');
+    }
+
+    /**
+     * Edit class fee form.
+     */
+    public function editClassFee(ClassFee $classFee)
+    {
+        $this->authorizeSchool($classFee);
+        
+        $schoolId = auth()->user()->school_id;
+        $years = AcademicYear::where('school_id', $schoolId)->orderBy('year', 'desc')->get();
+        $classes = SchoolClass::where('school_id', $schoolId)->where('status', 'active')->get();
+        
+        return view('school-admin.fees.class-fees-edit', compact('classFee', 'years', 'classes'));
     }
 
     /**
@@ -533,6 +651,154 @@ class SchoolAdminController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Bus fee created successfully.');
+    }
+
+    /**
+     * Edit bus fee form.
+     */
+    public function editBusFee(BusFee $busFee)
+    {
+        $this->authorizeSchool($busFee);
+        return view('school-admin.fees.bus-fees-edit', compact('busFee'));
+    }
+
+    /**
+     * Update bus fee.
+     */
+    public function updateBusFee(Request $request, BusFee $busFee)
+    {
+        $this->authorizeSchool($busFee);
+        
+        $validator = Validator::make($request->all(), [
+            'destination' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $busFee->update([
+            'destination' => $request->destination,
+            'price' => $request->price,
+            'status' => $request->status,
+        ]);
+
+        return redirect()->back()->with('success', 'Bus fee updated successfully.');
+    }
+
+    /**
+     * Delete bus fee.
+     */
+    public function destroyBusFee(BusFee $busFee)
+    {
+        $this->authorizeSchool($busFee);
+        $busFee->delete();
+        
+        return redirect()->back()->with('success', 'Bus fee deleted successfully.');
+    }
+
+    /**
+     * Import bus fees from Excel (update if exists, create if new).
+     */
+    public function importBusFees(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|mimes:xlsx,xls,csv',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $file = $request->file('file');
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+            
+            // Skip header row
+            array_shift($rows);
+            
+            $imported = 0;
+            $updated = 0;
+            $schoolId = auth()->user()->school_id;
+            
+            foreach ($rows as $row) {
+                if (!empty($row[0]) && !empty($row[1])) {
+                    // Check if destination already exists for this school
+                    $existingFee = BusFee::where('school_id', $schoolId)
+                        ->where('destination', $row[0])
+                        ->first();
+                    
+                    if ($existingFee) {
+                        // Update existing record
+                        $existingFee->update([
+                            'price' => $row[1],
+                        ]);
+                        $updated++;
+                    } else {
+                        // Create new record
+                        BusFee::create([
+                            'school_id' => $schoolId,
+                            'destination' => $row[0],
+                            'price' => $row[1],
+                            'status' => 'active',
+                        ]);
+                        $imported++;
+                    }
+                }
+            }
+
+            $message = "";
+            if ($imported > 0) {
+                $message .= "Created {$imported} new bus fees. ";
+            }
+            if ($updated > 0) {
+                $message .= "Updated {$updated} existing bus fees.";
+            }
+
+            return redirect()->back()->with('success', $message ?: 'No records to import.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error importing file: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export bus fees to Excel.
+     */
+    public function exportBusFees()
+    {
+        $schoolId = auth()->user()->school_id;
+        $fees = BusFee::where('school_id', $schoolId)->get();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        
+        // Header
+        $sheet->setCellValue('A1', 'Destination');
+        $sheet->setCellValue('B1', 'Price');
+        
+        $row = 2;
+        foreach ($fees as $fee) {
+            $sheet->setCellValue('A' . $row, $fee->destination);
+            $sheet->setCellValue('B' . $row, $fee->price);
+            $row++;
+        }
+
+        $filename = 'bus-fees-' . date('Y-m-d') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        
+        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save('php://output');
+        exit;
     }
 
     // ==================== BOOKSET PRICES ====================

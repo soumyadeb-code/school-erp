@@ -70,6 +70,14 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Registration Fees List</h5>
+                <div>
+                    <select class="form-select form-select-sm d-inline-block" style="width: auto;" id="yearFilter">
+                        <option value="">All Years</option>
+                        @foreach($years as $year)
+                        <option value="{{ $year->id }}">{{ $year->year }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -81,6 +89,7 @@
                                 <th>Amount</th>
                                 <th>Start Date</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -107,10 +116,22 @@
                                         <span class="badge bg-secondary">Inactive</span>
                                     @endif
                                 </td>
+                                <td>
+                                    <a href="{{ route('school-admin.fees.registration.edit', $fee->id) }}" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form method="POST" action="{{ route('school-admin.fees.registration.destroy', $fee->id) }}" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">
+                                <td colspan="6" class="text-center text-muted py-4">
                                     No registration fees configured. Add your first fee structure.
                                 </td>
                             </tr>

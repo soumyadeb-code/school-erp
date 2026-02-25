@@ -16,7 +16,11 @@ Route::get('/', function () {
 // Maintenance Preview Route (public - for preview in settings)
 Route::get('/maintenance-preview', function () {
     // Default settings for preview
-    $settings = \App\Models\MaintenanceSettings::first();
+    try {
+        $settings = \App\Models\MaintenanceSettings::first();
+    } catch (\Exception $e) {
+        $settings = null;
+    }
     
     return view('errors.maintenance', [
         'page_title' => $settings->page_title ?? 'Site Under Maintenance',
@@ -67,7 +71,7 @@ Route::middleware(['auth'])->group(function () {
         // Check school code uniqueness
         Route::get('/schools/check-code', [SuperAdminController::class, 'checkCode'])->name('schools.check-code');
         
-        // Maintenance Settings
+        // Maintenance Settings (Global)
         Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
         Route::put('/maintenance', [MaintenanceController::class, 'update'])->name('maintenance.update');
         Route::post('/maintenance/enable', [MaintenanceController::class, 'enable'])->name('maintenance.enable');
@@ -77,6 +81,12 @@ Route::middleware(['auth'])->group(function () {
     // School Admin Routes
     Route::prefix('')->name('school-admin.')->middleware(['role:school_admin'])->group(function () {
         Route::get('/dashboard', [SchoolAdminController::class, 'dashboard'])->name('dashboard');
+        
+        // Maintenance Settings (School-specific)
+        Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
+        Route::put('/maintenance', [MaintenanceController::class, 'update'])->name('maintenance.update');
+        Route::post('/maintenance/enable', [MaintenanceController::class, 'enable'])->name('maintenance.enable');
+        Route::post('/maintenance/disable', [MaintenanceController::class, 'disable'])->name('maintenance.disable');
         
         // Classes Management
         Route::get('/classes', [SchoolAdminController::class, 'classes'])->name('classes.index');
@@ -92,20 +102,32 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/academic-years/{year}/activate', [SchoolAdminController::class, 'activateAcademicYear'])->name('academic-years.activate');
         Route::delete('/academic-years/{year}', [SchoolAdminController::class, 'destroyAcademicYear'])->name('academic-years.destroy');
         
-        // Fees Setup
+// Fees Setup
         Route::get('/fees/admission', [SchoolAdminController::class, 'admissionFees'])->name('fees.admission');
         Route::post('/fees/admission', [SchoolAdminController::class, 'storeAdmissionFee'])->name('fees.admission.store');
+        Route::get('/fees/admission/{admissionFee}/edit', [SchoolAdminController::class, 'editAdmissionFee'])->name('fees.admission.edit');
+        Route::put('/fees/admission/{admissionFee}', [SchoolAdminController::class, 'updateAdmissionFee'])->name('fees.admission.update');
+        Route::delete('/fees/admission/{admissionFee}', [SchoolAdminController::class, 'destroyAdmissionFee'])->name('fees.admission.destroy');
         
         Route::get('/fees/registration', [SchoolAdminController::class, 'registrationFees'])->name('fees.registration');
         Route::post('/fees/registration', [SchoolAdminController::class, 'storeRegistrationFee'])->name('fees.registration.store');
+        Route::get('/fees/registration/{registrationFee}/edit', [SchoolAdminController::class, 'editRegistrationFee'])->name('fees.registration.edit');
+        Route::put('/fees/registration/{registrationFee}', [SchoolAdminController::class, 'updateRegistrationFee'])->name('fees.registration.update');
+        Route::delete('/fees/registration/{registrationFee}', [SchoolAdminController::class, 'destroyRegistrationFee'])->name('fees.registration.destroy');
         
-        Route::get('/fees/class', [SchoolAdminController::class, 'classFees'])->name('fees.class');
+Route::get('/fees/class', [SchoolAdminController::class, 'classFees'])->name('fees.class');
         Route::post('/fees/class', [SchoolAdminController::class, 'storeClassFee'])->name('fees.class.store');
+        Route::get('/fees/class/{classFee}/edit', [SchoolAdminController::class, 'editClassFee'])->name('fees.class.edit');
         Route::put('/fees/class/{classFee}', [SchoolAdminController::class, 'updateClassFee'])->name('fees.class.update');
         Route::delete('/fees/class/{classFee}', [SchoolAdminController::class, 'destroyClassFee'])->name('fees.class.destroy');
         
-        Route::get('/fees/bus', [SchoolAdminController::class, 'busFees'])->name('fees.bus');
+Route::get('/fees/bus', [SchoolAdminController::class, 'busFees'])->name('fees.bus');
         Route::post('/fees/bus', [SchoolAdminController::class, 'storeBusFee'])->name('fees.bus.store');
+        Route::get('/fees/bus/{busFee}/edit', [SchoolAdminController::class, 'editBusFee'])->name('fees.bus.edit');
+        Route::put('/fees/bus/{busFee}', [SchoolAdminController::class, 'updateBusFee'])->name('fees.bus.update');
+        Route::delete('/fees/bus/{busFee}', [SchoolAdminController::class, 'destroyBusFee'])->name('fees.bus.destroy');
+        Route::post('/fees/bus/import', [SchoolAdminController::class, 'importBusFees'])->name('fees.bus.import');
+        Route::get('/fees/bus/export', [SchoolAdminController::class, 'exportBusFees'])->name('fees.bus.export');
         
         Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->name('fees.bookset');
         Route::post('/fees/bookset', [SchoolAdminController::class, 'storeBooksetPrice'])->name('fees.bookset.store');

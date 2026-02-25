@@ -35,9 +35,9 @@
                         <label class="form-label">Medium <span class="text-danger">*</span></label>
                         <select class="form-select" name="medium" required>
                             <option value="">Select Medium</option>
-                            <option value="english">English</option>
-                            <option value="bengali">Bengali</option>
-                            <option value="hindi">Hindi</option>
+                            <option value="English">English</option>
+                            <option value="Bengali">Bengali</option>
+                            <option value="Hindi">Hindi</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -117,9 +117,9 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $fee->id }}">
+                                    <a href="{{ route('school-admin.fees.admission.edit', $fee->id) }}" class="btn btn-sm btn-warning">
                                         <i class="fas fa-edit"></i>
-                                    </button>
+                                    </a>
                                     <form method="POST" action="{{ route('school-admin.fees.admission.destroy', $fee->id) }}" class="d-inline">
                                         @csrf
                                         @method('DELETE')
@@ -129,43 +129,6 @@
                                     </form>
                                 </td>
                             </tr>
-                            
-                            <!-- Edit Modal -->
-                            <div class="modal fade" id="editModal{{ $fee->id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Edit Admission Fee</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <form method="POST" action="{{ route('school-admin.fees.admission.update', $fee->id) }}">
-                                            @csrf
-                                            @method('PUT')
-                                            <div class="modal-body">
-                                                <div class="mb-3">
-                                                    <label class="form-label">Amount (₹)</label>
-                                                    <input type="number" class="form-control" name="amount" value="{{ $fee->amount }}" min="0" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label">Admission Start Date</label>
-                                                    <input type="date" class="form-control" name="admission_start_date" value="{{ $fee->admission_start_date }}">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label">Status</label>
-                                                    <select class="form-select" name="status">
-                                                        <option value="active" {{ $fee->status === 'active' ? 'selected' : '' }}>Active</option>
-                                                        <option value="inactive" {{ $fee->status === 'inactive' ? 'selected' : '' }}>Inactive</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                <button type="submit" class="btn btn-primary">Update</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
                             @empty
                             <tr>
                                 <td colspan="6" class="text-center text-muted py-4">

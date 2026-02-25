@@ -34,6 +34,12 @@
                     Reports
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ route('super-admin.maintenance.index') }}">
+                    <i class="fas fa-tools"></i>
+                    Maintenance
+                </a>
+            </li>
         @else
             <!-- School Admin Menu -->
             <li class="nav-item">
@@ -141,6 +147,14 @@
                 <a class="nav-link" href="{{ route('students.fee-collection') }}">
                     <i class="fas fa-hand-holding-usd"></i>
                     Fee Collection
+                </a>
+            </li>
+            
+            <!-- Maintenance -->
+            <li class="nav-item">
+                <a class="nav-link" href="{{ route('school-admin.maintenance.index') }}">
+                    <i class="fas fa-tools"></i>
+                    Maintenance
                 </a>
             </li>
         @endif

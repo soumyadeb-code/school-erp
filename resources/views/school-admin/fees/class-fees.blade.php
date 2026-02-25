@@ -58,9 +58,9 @@
                             <td>{{ $fee->medium }}</td>
                             <td>₹{{ number_format($fee->tuition_fee, 2) }}</td>
                             <td>
-                                <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editFeeModal{{ $fee->id }}">
+                                <a href="{{ route('school-admin.fees.class.edit', $fee->id) }}" class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i>
-                                </button>
+                                </a>
                                 <form action="{{ route('school-admin.fees.class.destroy', $fee->id) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
@@ -70,60 +70,6 @@
                                 </form>
                             </td>
                         </tr>
-                        
-                        <!-- Edit Modal -->
-                        <div class="modal fade" id="editFeeModal{{ $fee->id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Edit Class Fee</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <form action="{{ route('school-admin.fees.class.update', $fee->id) }}" method="POST">
-                                        @csrf
-                                        @method('PUT')
-                                        <div class="modal-body">
-                                            <div class="mb-3">
-                                                <label class="form-label">Academic Year</label>
-                                                <select name="academic_year_id" class="form-select" required>
-                                                    @foreach($years as $year)
-                                                        <option value="{{ $year->id }}" {{ $fee->academic_year_id == $year->id ? 'selected' : '' }}>
-                                                            {{ $year->year }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Class</label>
-                                                <select name="class_id" class="form-select" required>
-                                                    @foreach($classes as $class)
-                                                        <option value="{{ $class->id }}" {{ $fee->class_id == $class->id ? 'selected' : '' }}>
-                                                            {{ $class->class_name }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Medium</label>
-                                                <select name="medium" class="form-select" required>
-                                                    <option value="Bengali" {{ $fee->medium == 'Bengali' ? 'selected' : '' }}>Bengali</option>
-                                                    <option value="English" {{ $fee->medium == 'English' ? 'selected' : '' }}>English</option>
-                                                    <option value="Hindi" {{ $fee->medium == 'Hindi' ? 'selected' : '' }}>Hindi</option>
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Tuition Fee (₹)</label>
-                                                <input type="number" name="tuition_fee" class="form-control" value="{{ $fee->tuition_fee }}" required min="0" step="0.01">
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                            <button type="submit" class="btn btn-primary">Update</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
                     @empty
                         <tr>
                             <td colspan="5" class="text-center">No class fees configured yet.</td>

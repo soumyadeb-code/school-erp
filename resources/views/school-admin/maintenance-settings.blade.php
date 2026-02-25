@@ -10,11 +10,11 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h3 class="mb-1">
-                                <i class="fas fa-tools me-2"></i>Global Maintenance Settings
+                                <i class="fas fa-tools me-2"></i>Maintenance Settings
                             </h3>
-                            <p class="mb-0 opacity-75">Configure system-wide maintenance page (affects all schools)</p>
+                            <p class="mb-0 opacity-75">Configure your school's maintenance page</p>
                         </div>
-                        <a href="{{ route('super-admin.dashboard') }}" class="btn btn-light btn-lg">
+                        <a href="{{ route('school-admin.dashboard') }}" class="btn btn-light btn-lg">
                             <i class="fas fa-arrow-left me-2"></i>Back
                         </a>
                     </div>
@@ -48,7 +48,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('super-admin.maintenance.update') }}" method="POST">
+                    <form action="{{ route('school-admin.maintenance.update') }}" method="POST">
                         @csrf
                         @method('PUT')
                         
@@ -58,23 +58,23 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-heading"></i></span>
                                     <input type="text" name="page_title" class="form-control form-control-lg" 
-                                        value="{{ old('page_title', $globalSettings->page_title ?? 'Site Under Maintenance') }}" required>
+                                        value="{{ old('page_title', $schoolSettings->page_title ?? 'Site Under Maintenance') }}" required>
                                 </div>
                             </div>
                             
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Organization Name</label>
+                                <label class="form-label fw-bold">School Name</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-school"></i></span>
                                     <input type="text" name="school_title" class="form-control form-control-lg" 
-                                        value="{{ old('school_title', $globalSettings->school_title ?? 'School Business ERP') }}" required>
+                                        value="{{ old('school_title', $schoolSettings->school_title ?? auth()->user()->school->school_name ?? 'My School') }}" required>
                                 </div>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Maintenance Message</label>
-                            <textarea name="maintenance_message" rows="4" class="form-control" required>{{ old('maintenance_message', $globalSettings->maintenance_message ?? "We're currently performing scheduled maintenance to improve our services.") }}</textarea>
+                            <textarea name="maintenance_message" rows="4" class="form-control" required>{{ old('maintenance_message', $schoolSettings->maintenance_message ?? "We're currently performing scheduled maintenance to improve our services.") }}</textarea>
                         </div>
 
                         <div class="row">
@@ -83,7 +83,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-envelope"></i></span>
                                     <input type="email" name="email" class="form-control" 
-                                        value="{{ old('email', $globalSettings->email ?? 'support@schoolerp.com') }}">
+                                        value="{{ old('email', $schoolSettings->email ?? 'support@schoolerp.com') }}">
                                 </div>
                             </div>
                             
@@ -92,7 +92,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-phone"></i></span>
                                     <input type="text" name="phone" class="form-control" 
-                                        value="{{ old('phone', $globalSettings->phone ?? '+1 (555) 123-4567') }}">
+                                        value="{{ old('phone', $schoolSettings->phone ?? '+1 (555) 123-4567') }}">
                                 </div>
                             </div>
                         </div>
@@ -118,37 +118,37 @@
                 </div>
                 <div class="card-body text-center py-4">
                     <div class="display-1 mb-3">
-                        @if($globalSettings && $globalSettings->is_active)
+                        @if($schoolSettings && $schoolSettings->is_active)
                             <i class="fas fa-tools text-danger animate-pulse"></i>
                         @else
                             <i class="fas fa-check-circle text-success"></i>
                         @endif
                     </div>
                     <h4 class="mb-3">
-                        @if($globalSettings && $globalSettings->is_active)
+                        @if($schoolSettings && $schoolSettings->is_active)
                             <span class="badge bg-danger fs-5">MAINTENANCE MODE ON</span>
                         @else
                             <span class="badge bg-success fs-5">SYSTEM OPERATIONAL</span>
                         @endif
                     </h4>
                     <p class="text-muted">
-                        @if($globalSettings && $globalSettings->is_active)
-                            All users are seeing the maintenance page
+                        @if($schoolSettings && $schoolSettings->is_active)
+                            Users are seeing the maintenance page
                         @else
-                            All users can access the site normally
+                            All users can access your school portal normally
                         @endif
                     </p>
                 </div>
                 <div class="card-footer bg-white border-0">
-                    @if($globalSettings && $globalSettings->is_active)
-                        <form action="{{ route('super-admin.maintenance.disable') }}" method="POST">
+                    @if($schoolSettings && $schoolSettings->is_active)
+                        <form action="{{ route('school-admin.maintenance.disable') }}" method="POST">
                             @csrf
                             <button type="submit" class="btn btn-success w-100 btn-lg">
                                 <i class="fas fa-play me-2"></i>Disable Maintenance
                             </button>
                         </form>
                     @else
-                        <form action="{{ route('super-admin.maintenance.enable') }}" method="POST">
+                        <form action="{{ route('school-admin.maintenance.enable') }}" method="POST">
                             @csrf
                             <button type="submit" class="btn btn-danger w-100 btn-lg">
                                 <i class="fas fa-pause me-2"></i>Enable Maintenance
@@ -163,60 +163,10 @@
                 <div class="card-body">
                     <h5><i class="fas fa-info-circle me-2"></i>How it works</h5>
                     <ul class="mb-0 small">
-                        <li class="mb-2">Enable global maintenance to show the page to ALL schools</li>
-                        <li class="mb-2">School admins can also enable maintenance for their school only</li>
-                        <li>The page automatically shows when MySQL is unavailable</li>
+                        <li class="mb-2">Enable maintenance mode to show the custom page to your school's users only</li>
+                        <li class="mb-2">Other schools will not be affected</li>
+                        <li>Parents and students of your school will see this page</li>
                     </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Schools Maintenance Status -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-white border-0">
-                    <h5 class="mb-0">
-                        <i class="fas fa-school text-success me-2"></i>School-wise Maintenance Status
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>School Name</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($schools as $school)
-                                    @php
-                                        $schoolMaintenance = \App\Models\MaintenanceSettings::where('school_id', $school->id)->first();
-                                    @endphp
-                                    <tr>
-                                        <td>{{ $school->school_name }}</td>
-                                        <td>
-                                            @if($schoolMaintenance && $schoolMaintenance->is_active)
-                                                <span class="badge bg-danger">Under Maintenance</span>
-                                            @else
-                                                <span class="badge bg-success">Active</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <a href="#" class="btn btn-sm btn-info">Manage</a>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="3" class="text-center">No schools found</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
         </div>
@@ -248,7 +198,7 @@
 
 <style>
 .bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
 }
 .animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;

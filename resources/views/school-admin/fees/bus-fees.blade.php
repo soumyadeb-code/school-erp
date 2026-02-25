@@ -18,9 +18,17 @@
                 <h5 class="mb-0">Bus Fees Configuration</h5>
             </div>
             <div class="col-md-6 text-end">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFeeModal">
-                    <i class="fas fa-plus"></i> Add Bus Fee
-                </button>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-file-import"></i> Import
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="exportBusFees()">
+                        <i class="fas fa-file-export"></i> Export
+                    </button>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addFeeModal">
+                        <i class="fas fa-plus"></i> Add Bus Fee
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -60,9 +68,9 @@
                                 </span>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editFeeModal{{ $fee->id }}">
+                                <a href="{{ route('school-admin.fees.bus.edit', $fee->id) }}" class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i>
-                                </button>
+                                </a>
                                 <form action="{{ route('school-admin.fees.bus.destroy', $fee->id) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
@@ -72,43 +80,6 @@
                                 </form>
                             </td>
                         </tr>
-                        
-                        <!-- Edit Modal -->
-                        <div class="modal fade" id="editFeeModal{{ $fee->id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Edit Bus Fee</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <form action="{{ route('school-admin.fees.bus.update', $fee->id) }}" method="POST">
-                                        @csrf
-                                        @method('PUT')
-                                        <div class="modal-body">
-                                            <div class="mb-3">
-                                                <label class="form-label">Destination</label>
-                                                <input type="text" name="destination" class="form-control" value="{{ $fee->destination }}" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Price (₹)</label>
-                                                <input type="number" name="price" class="form-control" value="{{ $fee->price }}" required min="0" step="0.01">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Status</label>
-                                                <select name="status" class="form-select" required>
-                                                    <option value="active" {{ $fee->status == 'active' ? 'selected' : '' }}>Active</option>
-                                                    <option value="inactive" {{ $fee->status == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                            <button type="submit" class="btn btn-primary">Update</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
                     @empty
                         <tr>
                             <td colspan="4" class="text-center">No bus fees configured yet.</td>
@@ -155,4 +126,39 @@
         </div>
     </div>
 </div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Bus Fees</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('school-admin.fees.bus.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Excel File</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                        <small class="text-muted">Supported formats: .xlsx, .xls, .csv</small>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Excel Format:</strong> Columns should be: Destination, Price, Status
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportBusFees() {
+    window.location.href = '{{ route("school-admin.fees.bus.export") }}';
+}
+</script>
 @endsection
