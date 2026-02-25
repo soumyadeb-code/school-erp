@@ -1,0 +1,148 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\SchoolAdminController;
+use App\Http\Controllers\StudentController;
+use App\Http\Controllers\MaintenanceController;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+
+// Public routes
+Route::get('/', function () {
+    return redirect('/login');
+});
+
+// Maintenance Preview Route (public - for preview in settings)
+Route::get('/maintenance-preview', function () {
+    // Default settings for preview
+    $settings = \App\Models\MaintenanceSettings::first();
+    
+    return view('errors.maintenance', [
+        'page_title' => $settings->page_title ?? 'Site Under Maintenance',
+        'school_title' => $settings->school_title ?? 'School Business ERP',
+        'maintenance_message' => $settings->maintenance_message ?? "We're currently performing scheduled maintenance to improve our services.",
+        'email' => $settings->email ?? 'support@schoolerp.com',
+        'phone' => $settings->phone ?? '+1 (555) 123-4567',
+    ]);
+});
+
+// Authentication routes (with maintenance check)
+Route::middleware(['maintenance'])->group(function () {
+    Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
+    Route::post('/login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+
+    // Registration routes
+    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
+    Route::post('/register', [RegisteredUserController::class, 'store']);
+});
+
+// Protected routes
+Route::middleware(['auth'])->group(function () {
+    // Dashboard - redirect based on role
+    Route::get('/dashboard', function () {
+        if (auth()->user()->role === 'super_admin') {
+            return redirect()->route('super-admin.dashboard');
+        }
+        return redirect()->route('school-admin.dashboard');
+    })->name('dashboard');
+
+    // Super Admin Routes
+    Route::prefix('super-admin')->name('super-admin.')->middleware(['role:super_admin'])->group(function () {
+        Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('dashboard');
+        
+        // Schools management
+        Route::get('/schools', [SuperAdminController::class, 'schools'])->name('schools.index');
+        Route::get('/schools/create', [SuperAdminController::class, 'createSchool'])->name('schools.create');
+        Route::post('/schools', [SuperAdminController::class, 'storeSchool'])->name('schools.store');
+        Route::get('/schools/{school}', [SuperAdminController::class, 'showSchool'])->name('schools.show');
+        Route::get('/schools/{school}/edit', [SuperAdminController::class, 'editSchool'])->name('schools.edit');
+        Route::put('/schools/{school}', [SuperAdminController::class, 'updateSchool'])->name('schools.update');
+        Route::delete('/schools/{school}', [SuperAdminController::class, 'destroySchool'])->name('schools.destroy');
+        
+        Route::get('/reports', [SuperAdminController::class, 'reports'])->name('reports');
+        Route::post('/schools/{school}/create-admin', [SuperAdminController::class, 'createAdmin'])->name('schools.create-admin');
+        
+        // Check school code uniqueness
+        Route::get('/schools/check-code', [SuperAdminController::class, 'checkCode'])->name('schools.check-code');
+        
+        // Maintenance Settings
+        Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
+        Route::put('/maintenance', [MaintenanceController::class, 'update'])->name('maintenance.update');
+        Route::post('/maintenance/enable', [MaintenanceController::class, 'enable'])->name('maintenance.enable');
+        Route::post('/maintenance/disable', [MaintenanceController::class, 'disable'])->name('maintenance.disable');
+    });
+
+    // School Admin Routes
+    Route::prefix('')->name('school-admin.')->middleware(['role:school_admin'])->group(function () {
+        Route::get('/dashboard', [SchoolAdminController::class, 'dashboard'])->name('dashboard');
+        
+        // Classes Management
+        Route::get('/classes', [SchoolAdminController::class, 'classes'])->name('classes.index');
+        Route::post('/classes', [SchoolAdminController::class, 'storeClass'])->name('classes.store');
+        Route::get('/classes/{class}/edit', [SchoolAdminController::class, 'editClass'])->name('classes.edit');
+        Route::put('/classes/{class}', [SchoolAdminController::class, 'updateClass'])->name('classes.update');
+        Route::delete('/classes/{class}', [SchoolAdminController::class, 'destroyClass'])->name('classes.destroy');
+        
+        // Academic Years
+        Route::get('/academic-years', [SchoolAdminController::class, 'academicYears'])->name('academic-years.index');
+        Route::post('/academic-years', [SchoolAdminController::class, 'storeAcademicYear'])->name('academic-years.store');
+        Route::post('/academic-years/{year}/toggle-lock', [SchoolAdminController::class, 'toggleYearLock'])->name('academic-years.toggle-lock');
+        Route::post('/academic-years/{year}/activate', [SchoolAdminController::class, 'activateAcademicYear'])->name('academic-years.activate');
+        Route::delete('/academic-years/{year}', [SchoolAdminController::class, 'destroyAcademicYear'])->name('academic-years.destroy');
+        
+        // Fees Setup
+        Route::get('/fees/admission', [SchoolAdminController::class, 'admissionFees'])->name('fees.admission');
+        Route::post('/fees/admission', [SchoolAdminController::class, 'storeAdmissionFee'])->name('fees.admission.store');
+        
+        Route::get('/fees/registration', [SchoolAdminController::class, 'registrationFees'])->name('fees.registration');
+        Route::post('/fees/registration', [SchoolAdminController::class, 'storeRegistrationFee'])->name('fees.registration.store');
+        
+        Route::get('/fees/class', [SchoolAdminController::class, 'classFees'])->name('fees.class');
+        Route::post('/fees/class', [SchoolAdminController::class, 'storeClassFee'])->name('fees.class.store');
+        Route::put('/fees/class/{classFee}', [SchoolAdminController::class, 'updateClassFee'])->name('fees.class.update');
+        Route::delete('/fees/class/{classFee}', [SchoolAdminController::class, 'destroyClassFee'])->name('fees.class.destroy');
+        
+        Route::get('/fees/bus', [SchoolAdminController::class, 'busFees'])->name('fees.bus');
+        Route::post('/fees/bus', [SchoolAdminController::class, 'storeBusFee'])->name('fees.bus.store');
+        
+        Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->name('fees.bookset');
+        Route::post('/fees/bookset', [SchoolAdminController::class, 'storeBooksetPrice'])->name('fees.bookset.store');
+        
+        Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->name('fees.discount');
+        Route::post('/fees/discount', [SchoolAdminController::class, 'storeDiscountRule'])->name('fees.discount.store');
+    });
+
+    // Student Management Routes
+    Route::prefix('students')->name('students.')->group(function () {
+        // Student list page (renders the view)
+        Route::get('/list', function() {
+            $classes = \App\Models\SchoolClass::where('school_id', auth()->user()->school_id)
+                ->where('status', 'active')
+                ->orderBy('minimum_age')
+                ->get();
+            return view('students.index', compact('classes'));
+        })->name('list');
+        
+        // Student list (AJAX for DataTables)
+        Route::get('/', [StudentController::class, 'index'])->name('index');
+        
+        // Admission
+        Route::get('/admission', [StudentController::class, 'admission'])->name('admission');
+        Route::post('/admission', [StudentController::class, 'storeStudent'])->name('admission.store');
+        Route::get('/{student}/billing', [StudentController::class, 'admissionBilling'])->name('billing');
+        Route::post('/{student}/billing', [StudentController::class, 'processAdmissionBilling'])->name('billing.process');
+        
+        Route::get('/{student}', [StudentController::class, 'show'])->name('show');
+        Route::get('/{student}/edit', [StudentController::class, 'edit'])->name('edit');
+        Route::put('/{student}', [StudentController::class, 'update'])->name('update');
+        Route::delete('/{student}', [StudentController::class, 'destroy'])->name('destroy');
+        
+        // Fee Collection
+        Route::get('/fee-collection', [StudentController::class, 'feeCollection'])->name('fee-collection');
+        Route::get('/{student}/payment-history', [StudentController::class, 'paymentHistory'])->name('payment-history');
+        Route::get('/{student}/monthly-bill', [StudentController::class, 'monthlyBill'])->name('monthly-bill');
+        Route::post('/{student}/monthly-bill', [StudentController::class, 'processMonthlyBill'])->name('monthly-bill.process');
+    });
+});
