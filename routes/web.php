@@ -130,8 +130,11 @@ Route::get('/fees/bus', [SchoolAdminController::class, 'busFees'])->name('fees.b
 Route::get('/fees/bus/export', [SchoolAdminController::class, 'exportBusFees'])->name('fees.bus.export');
         Route::get('/fees/bus/search', [SchoolAdminController::class, 'searchBusFees'])->name('fees.bus.search');
         
-        Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->name('fees.bookset');
+Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->name('fees.bookset');
         Route::post('/fees/bookset', [SchoolAdminController::class, 'storeBooksetPrice'])->name('fees.bookset.store');
+        Route::get('/fees/bookset/{booksetPrice}/edit', [SchoolAdminController::class, 'editBooksetPrice'])->name('fees.bookset.edit');
+        Route::put('/fees/bookset/{booksetPrice}', [SchoolAdminController::class, 'updateBooksetPrice'])->name('fees.bookset.update');
+        Route::delete('/fees/bookset/{booksetPrice}', [SchoolAdminController::class, 'destroyBooksetPrice'])->name('fees.bookset.destroy');
         
         Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->name('fees.discount');
         Route::post('/fees/discount', [SchoolAdminController::class, 'storeDiscountRule'])->name('fees.discount.store');

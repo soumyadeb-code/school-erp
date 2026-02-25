@@ -850,11 +850,12 @@ public function searchBusFees(Request $request)
     /**
      * Store bookset price.
      */
-    public function storeBooksetPrice(Request $request)
+public function storeBooksetPrice(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'academic_year_id' => 'required|exists:academic_years,id',
             'class_id' => 'required|exists:classes,id',
+            'medium' => 'required|in:Bengali,English,Hindi',
             'book_price' => 'required|numeric|min:0',
             'notebook_price' => 'required|numeric|min:0',
         ]);
@@ -868,11 +869,12 @@ public function searchBusFees(Request $request)
         $exists = BooksetPrice::where('school_id', auth()->user()->school_id)
             ->where('academic_year_id', $request->academic_year_id)
             ->where('class_id', $request->class_id)
+            ->where('medium', $request->medium)
             ->exists();
 
         if ($exists) {
             return redirect()->back()
-                ->with('error', 'Bookset price for this class and year already exists.')
+                ->with('error', 'Bookset price for this class, medium and year already exists.')
                 ->withInput();
         }
 
@@ -880,12 +882,71 @@ public function searchBusFees(Request $request)
             'school_id' => auth()->user()->school_id,
             'academic_year_id' => $request->academic_year_id,
             'class_id' => $request->class_id,
+            'medium' => $request->medium,
             'book_price' => $request->book_price,
             'notebook_price' => $request->notebook_price,
             'total_price' => $request->book_price + $request->notebook_price,
         ]);
 
         return redirect()->back()->with('success', 'Bookset price created successfully.');
+    }
+
+    /**
+     * Edit bookset price form.
+     */
+    public function editBooksetPrice(BooksetPrice $booksetPrice)
+    {
+        $this->authorizeSchool($booksetPrice);
+        
+        $schoolId = auth()->user()->school_id;
+        $years = AcademicYear::where('school_id', $schoolId)->orderBy('year', 'desc')->get();
+        $classes = SchoolClass::where('school_id', $schoolId)->where('status', 'active')->get();
+        
+        return view('school-admin.fees.bookset-prices-edit', compact('booksetPrice', 'years', 'classes'));
+    }
+
+    /**
+     * Update bookset price.
+     */
+    public function updateBooksetPrice(Request $request, BooksetPrice $booksetPrice)
+    {
+        $this->authorizeSchool($booksetPrice);
+        
+        $validator = Validator::make($request->all(), [
+            'academic_year_id' => 'required|exists:academic_years,id',
+            'class_id' => 'required|exists:classes,id',
+            'medium' => 'required|in:Bengali,English,Hindi',
+            'book_price' => 'required|numeric|min:0',
+            'notebook_price' => 'required|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $booksetPrice->update([
+            'academic_year_id' => $request->academic_year_id,
+            'class_id' => $request->class_id,
+            'medium' => $request->medium,
+            'book_price' => $request->book_price,
+            'notebook_price' => $request->notebook_price,
+            'total_price' => $request->book_price + $request->notebook_price,
+        ]);
+
+        return redirect()->back()->with('success', 'Bookset price updated successfully.');
+    }
+
+    /**
+     * Delete bookset price.
+     */
+    public function destroyBooksetPrice(BooksetPrice $booksetPrice)
+    {
+        $this->authorizeSchool($booksetPrice);
+        $booksetPrice->delete();
+        
+        return redirect()->back()->with('success', 'Bookset price deleted successfully.');
     }
 
     // ==================== DISCOUNT RULES ====================
