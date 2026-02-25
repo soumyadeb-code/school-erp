@@ -626,7 +626,7 @@ class SchoolAdminController extends Controller
     /**
      * Search bus fees (AJAX).
      */
-    public function searchBusFees(Request $request)
+public function searchBusFees(Request $request)
     {
         $schoolId = auth()->user()->school_id;
         
@@ -646,7 +646,10 @@ class SchoolAdminController extends Controller
             $query->where('status', $request->status);
         }
         
-        $fees = $query->orderBy('id', 'desc')->paginate(10);
+        // Per page - default 10
+        $perPage = $request->per_page ?? 10;
+        
+        $fees = $query->orderBy('id', 'desc')->paginate($perPage);
         
         return response()->json($fees);
     }

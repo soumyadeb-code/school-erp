@@ -216,7 +216,7 @@
                                 <h4 class="mb-0">@yield('page-title', 'Dashboard')</h4>
                                 <nav aria-label="breadcrumb">
                                     <ol class="breadcrumb">
-<li class="breadcrumb-item"><a href="{{ auth()->user()->role === 'super_admin' ? route('super-admin.dashboard') : route('school-admin.dashboard') }}">Home</a></li>
+{{-- <li class="breadcrumb-item"><a href="{{ auth()->user()->role === 'super_admin' ? route('super-admin.dashboard') : route('school-admin.dashboard') }}">Home</a></li> --}}
                                         @yield('breadcrumb')
                                     </ol>
                                 </nav>

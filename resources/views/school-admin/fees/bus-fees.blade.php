@@ -15,7 +15,7 @@
     <div class="card-header">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h5 class="mb-0">Bus Fees Configuration</h5>
+                <h5 class="mb-0">Bus Fees Configuration <span class="badge bg-primary" id="totalRecords">0</span></h5>
             </div>
             <div class="col-md-6 text-end">
                 <div class="btn-group" role="group">
@@ -35,17 +35,24 @@
     <div class="card-body">
         <!-- Search and Filter Section -->
         <div class="row mb-3">
-            <div class="col-md-6">
+            <div class="col-md-5">
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
                     <input type="text" id="searchInput" class="form-control" placeholder="Search by destination or price...">
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select id="statusFilter" class="form-select">
                     <option value="">All Status</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="perPage" class="form-select" onchange="loadBusFees(1)">
+                    <option value="10">10 per page</option>
+                    <option value="20">20 per page</option>
+                    <option value="50">50 per page</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -73,10 +80,11 @@
             <table class="table table-bordered table-striped" id="busFeesTable">
                 <thead>
                     <tr>
+                        <th width="50">S.No.</th>
                         <th>Destination</th>
                         <th>Price</th>
                         <th>Status</th>
-                        <th>Actions</th>
+                        <th width="120">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="busFeesTableBody">
@@ -164,6 +172,7 @@
 
 <script>
 let searchTimeout = null;
+let currentPage = 1;
 
 // Initial load
 document.addEventListener('DOMContentLoaded', function() {
@@ -184,44 +193,54 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadBusFees(page = 1) {
+    currentPage = page;
     const search = document.getElementById('searchInput').value;
     const status = document.getElementById('statusFilter').value;
+    const perPage = document.getElementById('perPage').value;
     
     const url = '{{ route("school-admin.fees.bus.search") }}?' + 
         'page=' + page + 
         '&search=' + encodeURIComponent(search) + 
-        '&status=' + encodeURIComponent(status);
+        '&status=' + encodeURIComponent(status) +
+        '&per_page=' + perPage;
     
     fetch(url)
         .then(response => response.json())
         .then(data => {
-            updateTable(data);
+            updateTable(data, page, perPage);
         })
         .catch(error => {
             console.error('Error loading bus fees:', error);
         });
 }
 
-function updateTable(data) {
+function updateTable(data, page, perPage) {
     const tbody = document.getElementById('busFeesTableBody');
     const paginationInfo = document.getElementById('paginationInfo');
     const paginationLinks = document.getElementById('paginationLinks');
+    const totalRecords = document.getElementById('totalRecords');
+    
+    // Update total records badge
+    totalRecords.textContent = data.total;
     
     if (data.data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No bus fees found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No bus fees found.</td></tr>';
         paginationInfo.textContent = 'Showing 0 to 0 of 0 entries';
         paginationLinks.innerHTML = '';
         return;
     }
     
     let html = '';
-    data.data.forEach(fee => {
+    const startSerial = (data.current_page - 1) * data.per_page + 1;
+    
+    data.data.forEach((fee, index) => {
         const statusClass = fee.status === 'active' ? 'success' : 'secondary';
         const editUrl = '{{ route("school-admin.fees.bus.edit", ":id") }}'.replace(':id', fee.id);
         const deleteUrl = '{{ route("school-admin.fees.bus.destroy", ":id") }}'.replace(':id', fee.id);
         
         html += `
             <tr>
+                <td>${startSerial + index}</td>
                 <td>${fee.destination}</td>
                 <td>₹${parseFloat(fee.price).toFixed(2)}</td>
                 <td><span class="badge bg-${statusClass}">${fee.status.charAt(0).toUpperCase() + fee.status.slice(1)}</span></td>
@@ -281,6 +300,7 @@ function buildPagination(data) {
 function clearFilters() {
     document.getElementById('searchInput').value = '';
     document.getElementById('statusFilter').value = '';
+    document.getElementById('perPage').value = '10';
     loadBusFees(1);
 }
 
