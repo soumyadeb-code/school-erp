@@ -143,6 +143,13 @@
                                     <a href="{{ route('students.billing', $student->id) }}" class="btn btn-sm btn-success">
                                         <i class="fas fa-file-invoice"></i> Generate Bill
                                     </a>
+                                    <form method="POST" action="{{ route('students.destroy', $student->id) }}" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this student? This action cannot be undone.')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
                                     @else
                                     <a href="{{ route('students.show', $student->id) }}" class="btn btn-sm btn-info">
                                         <i class="fas fa-eye"></i>
@@ -164,4 +171,27 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+function handleDelete(button) {
+    // Get the form
+    const form = button.closest('form');
+    const modal = button.closest('.modal');
+    
+    // Hide the modal immediately
+    const modalInstance = bootstrap.Modal.getInstance(modal);
+    if (modalInstance) {
+        modalInstance.hide();
+    }
+    
+    // Remove modal backdrop
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    
+    // Submit the form normally
+    form.submit();
+}
+</script>
 @endsection

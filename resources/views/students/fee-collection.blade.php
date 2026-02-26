@@ -11,6 +11,7 @@
 
 @section('content')
 <div class="row">
+    <!-- Left Column - Search and Student Details -->
     <div class="col-md-4">
         <div class="card mb-4">
             <div class="card-header">
@@ -21,9 +22,9 @@
                     <div class="mb-3">
                         <label class="form-label">Search by</label>
                         <select class="form-select" name="search_type">
-                            <option value="id">Student ID</option>
-                            <option value="name">Name</option>
-                            <option value="phone">Phone Number</option>
+                            <option value="id" {{ request('search_type', 'id') == 'id' ? 'selected' : '' }}>Student ID</option>
+                            <option value="name" {{ request('search_type') == 'name' ? 'selected' : '' }}>Name</option>
+                            <option value="phone" {{ request('search_type') == 'phone' ? 'selected' : '' }}>Phone Number</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -32,6 +33,11 @@
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-search me-2"></i>Search
                     </button>
+                    @if(request('query'))
+                    <a href="{{ route('students.fee-collection') }}" class="btn btn-secondary w-100 mt-2">
+                        <i class="fas fa-times me-2"></i>Clear Search
+                    </a>
+                    @endif
                 </form>
             </div>
         </div>
@@ -84,8 +90,10 @@
         @endif
     </div>
     
+    <!-- Right Column - Students Table or Payment Form -->
     <div class="col-md-8">
         @if($selectedStudent)
+        <!-- Payment History and Form when student is selected -->
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Payment History - {{ $selectedStudent->name }}</h5>
@@ -114,7 +122,7 @@
                         </thead>
                         <tbody>
                             @php
-                            $months = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
+                            $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
                             @endphp
                             @foreach($months as $index => $month)
                             @php
@@ -141,7 +149,7 @@
                                         <form method="POST" action="{{ route('students.collect-fee') }}" class="d-inline">
                                             @csrf
                                             <input type="hidden" name="student_id" value="{{ $selectedStudent->id }}">
-                                            <input type="hidden" name="month" value="{{ $index + 4 }}">
+                                            <input type="hidden" name="months[]" value="{{ $index + 4 }}">
                                             <input type="hidden" name="year" value="{{ $selectedYear }}">
                                             <button type="submit" class="btn btn-sm btn-primary">
                                                 <i class="fas fa-plus"></i> Pay
@@ -233,11 +241,57 @@
             </div>
         </div>
         @else
+        <!-- Students Table - Show all students by default -->
         <div class="card">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-search text-muted" style="font-size: 64px;"></i>
-                <h4 class="mt-3">Search for a Student</h4>
-                <p class="text-muted">Enter Student ID, Name, or Phone Number to search</p>
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>All Students</h5>
+            </div>
+            <div class="card-body">
+                @if($students->count() > 0)
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Class</th>
+                                <th>Medium</th>
+                                <th>Phone</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($students as $student)
+                            <tr>
+                                <td>{{ $student->student_id }}</td>
+                                <td>{{ $student->name }}</td>
+                                <td>{{ $student->schoolClass->class_name ?? 'N/A' }}</td>
+                                <td>{{ ucfirst($student->medium) }}</td>
+                                <td>{{ $student->phone ?? '-' }}</td>
+                                <td>
+                                    <a href="{{ route('students.fee-collection', ['student_id' => $student->id]) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-money-bill"></i> Collect Fee
+                                    </a>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                @if($students->hasPages())
+                <div class="d-flex justify-content-center mt-4">
+                    {{ $students->links() }}
+                </div>
+                @endif
+                @else
+                <div class="text-center py-5">
+                    <i class="fas fa-users text-muted" style="font-size: 48px;"></i>
+                    <h5 class="mt-3">No Students Found</h5>
+                    <p class="text-muted">There are no active students in your school.</p>
+                </div>
+                @endif
             </div>
         </div>
         @endif

@@ -138,6 +138,13 @@ Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->na
         
         Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->name('fees.discount');
         Route::post('/fees/discount', [SchoolAdminController::class, 'storeDiscountRule'])->name('fees.discount.store');
+        
+        // School Profile
+        Route::get('/profile', [SchoolAdminController::class, 'profile'])->name('profile');
+        Route::put('/profile', [SchoolAdminController::class, 'updateProfile'])->name('profile.update');
+        Route::put('/profile/password', [SchoolAdminController::class, 'updatePassword'])->name('profile.password');
+        Route::get('/profile/check-code', [SchoolAdminController::class, 'checkSchoolCode'])->name('profile.check-code');
+        Route::get('/profile/check-email', [SchoolAdminController::class, 'checkSchoolEmail'])->name('profile.check-email');
     });
 
     // Student Management Routes
@@ -151,24 +158,44 @@ Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->na
             return view('students.index', compact('classes'));
         })->name('list');
         
+        // Student search (AJAX)
+        Route::get('/search', [StudentController::class, 'search'])->name('search');
+        
         // Student list (AJAX for DataTables)
         Route::get('/', [StudentController::class, 'index'])->name('index');
+        
+        // Fee Collection - MUST be before /{student} route
+        Route::get('/fee-collection', [StudentController::class, 'feeCollection'])->name('fee-collection');
+        Route::post('/fee-collection/collect', [StudentController::class, 'collectFee'])->name('collect-fee');
+        
+        // Bill History - shows all bills/receipts
+        Route::get('/bill-history', [StudentController::class, 'billHistory'])->name('bill-history');
+        Route::get('/bill-history/ajax', [StudentController::class, 'billHistoryAjax'])->name('bill-history.ajax');
         
         // Admission
         Route::get('/admission', [StudentController::class, 'admission'])->name('admission');
         Route::post('/admission', [StudentController::class, 'storeStudent'])->name('admission.store');
+        
+        // Registration
+        Route::get('/registration', [StudentController::class, 'registration'])->name('registration');
+        
         Route::get('/{student}/billing', [StudentController::class, 'admissionBilling'])->name('billing');
         Route::post('/{student}/billing', [StudentController::class, 'processAdmissionBilling'])->name('billing.process');
         
+        // Student operations - these come after specific routes
         Route::get('/{student}', [StudentController::class, 'show'])->name('show');
         Route::get('/{student}/edit', [StudentController::class, 'edit'])->name('edit');
         Route::put('/{student}', [StudentController::class, 'update'])->name('update');
         Route::delete('/{student}', [StudentController::class, 'destroy'])->name('destroy');
         
-        // Fee Collection
-        Route::get('/fee-collection', [StudentController::class, 'feeCollection'])->name('fee-collection');
+        // Student fee related routes
+        Route::get('/{student}/fee-price-list', [StudentController::class, 'feePriceList'])->name('fee-price-list');
         Route::get('/{student}/payment-history', [StudentController::class, 'paymentHistory'])->name('payment-history');
         Route::get('/{student}/monthly-bill', [StudentController::class, 'monthlyBill'])->name('monthly-bill');
         Route::post('/{student}/monthly-bill', [StudentController::class, 'processMonthlyBill'])->name('monthly-bill.process');
+        
+        // Receipts
+        Route::get('/receipt/{payment}', [StudentController::class, 'showReceipt'])->name('receipt');
+        Route::get('/receipt-view/{receipt}', [StudentController::class, 'showReceiptById'])->name('receipt-view');
     });
 });

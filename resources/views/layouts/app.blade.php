@@ -231,6 +231,11 @@
                                         <li><span class="dropdown-item-text">
                                             <small class="text-muted">Role: {{ ucfirst(str_replace('_', ' ', auth()->user()->role)) }}</small>
                                         </span></li>
+                                        @if(auth()->user()->role === 'school_admin')
+                                        <li><a class="dropdown-item" href="{{ route('school-admin.profile') }}">
+                                            <i class="fas fa-user-cog me-2"></i>Profile
+                                        </a></li>
+                                        @endif
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
                                             <form method="POST" action="{{ route('logout') }}">

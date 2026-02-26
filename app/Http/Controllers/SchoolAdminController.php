@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\AcademicYear;
 use App\Models\AdmissionFee;
@@ -989,6 +990,116 @@ public function storeBooksetPrice(Request $request)
         );
 
         return redirect()->back()->with('success', 'Discount rule updated successfully.');
+    }
+
+    // ==================== SCHOOL PROFILE ====================
+    
+    /**
+     * Show school profile page.
+     */
+    public function profile()
+    {
+        $schoolId = auth()->user()->school_id;
+        $school = School::findOrFail($schoolId);
+        
+        return view('school-admin.profile', compact('school'));
+    }
+
+    /**
+     * Update school profile.
+     */
+    public function updateProfile(Request $request)
+    {
+        $schoolId = auth()->user()->school_id;
+        $school = School::findOrFail($schoolId);
+        
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:10|unique:schools,code,' . $school->id,
+            'email' => 'required|email|unique:schools,email,' . $school->id,
+            'address' => 'nullable|string',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $school->update($request->only(['name', 'code', 'email', 'address', 'phone']));
+
+        return redirect()->back()->with('success', 'School profile updated successfully.');
+    }
+
+    /**
+     * Update school admin password.
+     */
+    public function updatePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $user = auth()->user();
+        
+        // Verify current password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return redirect()->back()
+                ->with('error', 'Current password is incorrect.')
+                ->withInput();
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return redirect()->back()->with('success', 'Password updated successfully.');
+    }
+
+    /**
+     * Check if school code is unique (AJAX).
+     */
+    public function checkSchoolCode(Request $request)
+    {
+        $code = $request->input('code');
+        $excludeId = $request->input('exclude_id');
+        
+        $query = School::where('code', $code);
+        
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+        
+        $exists = $query->exists();
+        
+        return response()->json(['exists' => $exists]);
+    }
+
+    /**
+     * Check if school email is unique (AJAX).
+     */
+    public function checkSchoolEmail(Request $request)
+    {
+        $email = $request->input('email');
+        $excludeId = $request->input('exclude_id');
+        
+        $query = School::where('email', $email);
+        
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+        
+        $exists = $query->exists();
+        
+        return response()->json(['exists' => $exists]);
     }
 
     /**

@@ -30,14 +30,22 @@ class StudentController extends Controller
      */
     public function index(Request $request)
     {
-        $schoolId = auth()->user()->school_id;
+        $user = auth()->user();
         
-        $query = Student::with('schoolClass')
-            ->where('school_id', $schoolId);
+        // Super admin can see all students, school admins see only their school's students
+        $query = Student::with('schoolClass');
         
-        // Search filter
-        if ($request->has('search') && $request->search['value']) {
-            $search = $request->search['value'];
+        if ($user->role !== 'super_admin') {
+            $query->where('school_id', $user->school_id);
+        }
+        
+        // Search filter - handle both DataTables format and simple string
+        $search = $request->search;
+        if (is_array($search) && isset($search['value'])) {
+            $search = $search['value'];
+        }
+        
+        if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
                   ->orWhere('student_id', 'like', '%' . $search . '%');
@@ -45,31 +53,44 @@ class StudentController extends Controller
         }
         
         // Custom filters
-        if ($request->has('class_id') && $request->class_id) {
+        if ($request->filled('class_id')) {
             $query->where('class_id', $request->class_id);
         }
         
-        if ($request->has('gender') && $request->gender) {
+        if ($request->filled('gender')) {
             $query->where('gender', $request->gender);
         }
         
-        if ($request->has('medium') && $request->medium) {
+        if ($request->filled('medium')) {
             $query->where('medium', $request->medium);
         }
         
-        if ($request->has('status') && $request->status) {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
         
-        // Get total count before filtering
-        $totalRecords = Student::where('school_id', $schoolId)->count();
+        // Get total count before filtering (respect role-based access)
+        if ($user->role === 'super_admin') {
+            $totalRecords = Student::count();
+        } else {
+            $totalRecords = Student::where('school_id', $user->school_id)->count();
+        }
         
         // Get filtered count
         $filteredRecords = $query->count();
         
-        // Sorting
-        $orderColumn = $request->columns[$request->order[0]['column']]['name'] ?? 'created_at';
-        $orderDir = $request->order[0]['dir'] ?? 'desc';
+        // Sorting - with null checks for safety
+        $orderColumn = 'created_at';
+        $orderDir = 'desc';
+        
+        if ($request->has('order') && is_array($request->order) && count($request->order) > 0) {
+            $orderColIndex = $request->order[0]['column'] ?? 0;
+            $orderDir = $request->order[0]['dir'] ?? 'desc';
+            
+            if ($request->has('columns') && is_array($request->columns) && isset($request->columns[$orderColIndex])) {
+                $orderColumn = $request->columns[$orderColIndex]['name'] ?? 'created_at';
+            }
+        }
         
         // Pagination
         $start = $request->start ?? 0;
@@ -103,6 +124,65 @@ class StudentController extends Controller
             'recordsTotal' => $totalRecords,
             'recordsFiltered' => $filteredRecords,
             'data' => $data
+        ]);
+    }
+
+    /**
+     * Search students with pagination and filters (AJAX).
+     */
+    public function search(Request $request)
+    {
+        $schoolId = auth()->user()->school_id;
+        
+        $query = Student::with('schoolClass')
+            ->where('school_id', $schoolId);
+        
+        // Search filter
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('student_id', 'like', '%' . $search . '%')
+                  ->orWhere('phone', 'like', '%' . $search . '%')
+                  ->orWhere('father_name', 'like', '%' . $search . '%');
+            });
+        }
+        
+        // Class filter
+        if ($request->has('class_id') && $request->class_id) {
+            $query->where('class_id', $request->class_id);
+        }
+        
+        // Gender filter
+        if ($request->has('gender') && $request->gender) {
+            $query->where('gender', $request->gender);
+        }
+        
+        // Medium filter
+        if ($request->has('medium') && $request->medium) {
+            $query->where('medium', $request->medium);
+        }
+        
+        // Status filter
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+        
+        // Get total count
+        $totalRecords = Student::where('school_id', $schoolId)->count();
+        
+        // Get filtered count
+        $filteredRecords = $query->count();
+        
+        // Pagination
+        $perPage = $request->per_page ?? 10;
+        $students = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+        
+        return response()->json([
+            'students' => $students,
+            'totalRecords' => $totalRecords,
+            'filteredRecords' => $filteredRecords
         ]);
     }
 
@@ -154,6 +234,52 @@ class StudentController extends Controller
     }
 
     /**
+     * Show registration form.
+     */
+    public function registration()
+    {
+        $schoolId = auth()->user()->school_id;
+        
+        // Get active academic year
+        $academicYear = AcademicYear::where('school_id', $schoolId)
+            ->where('is_active', true)
+            ->first();
+            
+        $classes = SchoolClass::where('school_id', $schoolId)
+            ->where('status', 'active')
+            ->orderBy('minimum_age')
+            ->get();
+            
+        $mediums = ['Bengali', 'English', 'Hindi'];
+        
+        // Get registration fees
+        $registrationFees = [];
+        if ($academicYear) {
+            $registrationFees = RegistrationFee::where('school_id', $schoolId)
+                ->where('academic_year_id', $academicYear->id)
+                ->where('status', 'active')
+                ->get()
+                ->keyBy('medium');
+        }
+        
+        // Get students with completed admission (registered status)
+        $registeredStudents = Student::where('school_id', $schoolId)
+            ->where('admission_status', 'completed')
+            ->where('registration_status', 'pending')
+            ->with('schoolClass')
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        return view('students.registration', compact(
+            'academicYear',
+            'classes',
+            'mediums',
+            'registrationFees',
+            'registeredStudents'
+        ));
+    }
+
+    /**
      * Store new student (pre-admission).
      */
     public function storeStudent(Request $request)
@@ -192,7 +318,7 @@ class StudentController extends Controller
             ->first();
             
         $yearCode = $academicYear ? substr($academicYear->year, -2) : date('y');
-        $schoolCode = $school->school_code ?? 'XX';
+        $schoolCode = $school->code ?? 'KR';
         
         // Get last student count for this year
         $lastStudent = Student::where('school_id', $schoolId)
@@ -345,9 +471,10 @@ class StudentController extends Controller
         // Calculate due/advance
         $newDue = max(0, $finalTotal - $amountPaid);
         $newAdvance = max(0, $amountPaid - $finalTotal);
-
-        DB::transaction(function () use ($schoolId, $student, $request, $totalAmount, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $academicYear) {
-            // Create receipt
+        
+        $receipt = DB::transaction(function () use ($schoolId, $student, $request, $totalAmount, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $academicYear) {
+            // Create receipt - use 'paid' or 'due' based on payment status
+            $receiptStatus = $newDue > 0 ? 'due' : 'paid';
             $receipt = Receipt::create([
                 'school_id' => $schoolId,
                 'student_id' => $student->id,
@@ -361,7 +488,7 @@ class StudentController extends Controller
                 'old_due_paid' => $oldDue,
                 'payment_mode' => $request->payment_mode,
                 'billing_date' => $request->billing_date,
-                'status' => 'active',
+                'status' => $receiptStatus,
                 'created_by' => auth()->id(),
             ]);
 
@@ -400,15 +527,17 @@ class StudentController extends Controller
                 );
             }
 
-            // Update student status
+            // Update student status - set admission_status to completed
             $student->update([
-                'admission_status' => 'completed',
-                'status' => 'active'
+                'status' => 'active',
+                'admission_status' => 'completed'
             ]);
+            
+            return $receipt;
         });
 
-        return redirect()->route('students.admission')
-            ->with('success', 'Admission billing completed successfully.');
+        return redirect()->route('students.receipt-view', $receipt->id)
+            ->with('success', 'Admission billing completed successfully. Please print the receipt.');
     }
 
     /**
@@ -472,21 +601,21 @@ class StudentController extends Controller
     }
 
     /**
-     * Delete student.
+     * Delete student permanently.
      */
     public function destroy(Student $student)
     {
         $this->authorizeSchool($student);
         
-        // Check for active dues
-        $due = StudentDue::where('student_id', $student->id)->sum('total_due');
+        // Delete all related data
+        StudentDue::where('student_id', $student->id)->delete();
+        StudentAdvance::where('student_id', $student->id)->delete();
+        Receipt::where('student_id', $student->id)->delete();
+        MonthlyPayment::where('student_id', $student->id)->delete();
+        StudentAcademicHistory::where('student_id', $student->id)->delete();
         
-        if ($due > 0) {
-            return redirect()->back()
-                ->with('error', 'Cannot delete student with pending dues.');
-        }
-        
-        $student->update(['status' => 'deleted']);
+        // Permanently delete the student
+        $student->delete();
         
         return redirect()->route('students.admission')
             ->with('success', 'Student deleted successfully.');
@@ -501,21 +630,196 @@ class StudentController extends Controller
     {
         $schoolId = auth()->user()->school_id;
         
-        $query = Student::where('school_id', $schoolId)
-            ->where('status', 'active')
-            ->where('admission_status', 'completed');
+        // Get search parameters
+        $searchType = $request->input('search_type', 'id');
+        $query = $request->input('query', '');
+        
+        // Get all active students for the list
+        $studentsQuery = Student::with('schoolClass')->where('school_id', $schoolId)
+            ->where('status', 'active');
             
-        if ($request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('student_id', 'like', '%' . $request->search . '%')
-                  ->orWhere('phone', 'like', '%' . $request->search . '%');
-            });
+        if ($query) {
+            if ($searchType === 'id') {
+                $studentsQuery->where('student_id', 'like', '%' . $query . '%');
+            } elseif ($searchType === 'name') {
+                $studentsQuery->where('name', 'like', '%' . $query . '%');
+            } elseif ($searchType === 'phone') {
+                $studentsQuery->where('phone', 'like', '%' . $query . '%');
+            }
         }
         
-        $students = $query->orderBy('name')->paginate(20);
+        $students = $studentsQuery->orderBy('name')->paginate(20);
         
-        return view('students.fee-collection', compact('students'));
+        // Get selected student details
+        $selectedStudent = null;
+        $totalDue = 0;
+        $totalAdvance = 0;
+        $monthlyFee = 0;
+        $busFee = 0;
+        $academicYears = [];
+        $selectedYear = null;
+        $payments = collect([]);
+        
+        if ($request->student_id) {
+            $selectedStudent = Student::with('schoolClass')
+                ->where('school_id', $schoolId)
+                ->where('id', $request->student_id)
+                ->first();
+            
+            if ($selectedStudent) {
+                // Get academic years
+                $academicYears = AcademicYear::where('school_id', $schoolId)
+                    ->orderBy('year', 'desc')
+                    ->get();
+                
+                // Get current year
+                $currentYear = $academicYears->where('is_active', true)->first();
+                $selectedYear = $request->year ?? ($currentYear ? $currentYear->id : ($academicYears->first()->id ?? null));
+                
+                // Get current academic year object
+                $selectedYearObj = $academicYears->firstWhere('id', $selectedYear);
+                
+                // Get fees
+                if ($selectedYearObj) {
+                    $classFee = ClassFee::where('school_id', $schoolId)
+                        ->where('academic_year_id', $selectedYear)
+                        ->where('class_id', $selectedStudent->class_id)
+                        ->where('medium', $selectedStudent->medium)
+                        ->first();
+                    $monthlyFee = $classFee ? $classFee->tuition_fee : 0;
+                    
+                    if ($selectedStudent->bus_destination_id) {
+                        $busFeeRecord = BusFee::where('school_id', $schoolId)
+                            ->where('id', $selectedStudent->bus_destination_id)
+                            ->first();
+                        $busFee = $busFeeRecord ? $busFeeRecord->fee : 0;
+                    }
+                }
+                
+                // Get old due
+                $totalDue = StudentDue::where('school_id', $schoolId)
+                    ->where('student_id', $selectedStudent->id)
+                    ->sum('total_due');
+                
+                // Get advance
+                $totalAdvance = StudentAdvance::where('school_id', $schoolId)
+                    ->where('student_id', $selectedStudent->id)
+                    ->sum('total_advance');
+                
+                // Get payments
+                if ($selectedYear) {
+                    $payments = MonthlyPayment::where('school_id', $schoolId)
+                        ->where('student_id', $selectedStudent->id)
+                        ->where('academic_year_id', $selectedYear)
+                        ->orderBy('month')
+                        ->get();
+                }
+            }
+        }
+       return view('students.fee-collection', compact(
+            'students',
+            'selectedStudent',
+            'totalDue',
+            'totalAdvance',
+            'monthlyFee',
+            'busFee',
+            'academicYears',
+            'selectedYear',
+            'payments'
+        ));
+
+         // return "Hello World - Fee Collection Page (Under Construction)";
+        // return view('students.fee-collection');
+        
+    }
+
+    /**
+     * Show fee price list for a student.
+     */
+    public function feePriceList(Student $student)
+    {
+        $this->authorizeSchool($student);
+        
+        $schoolId = auth()->user()->school_id;
+        
+        // Get active academic year
+        $academicYear = AcademicYear::where('school_id', $schoolId)
+            ->where('is_active', true)
+            ->first();
+        
+        // Get Admission Fee
+        $admissionFeeAmount = 0;
+        if ($academicYear) {
+            $admissionFee = AdmissionFee::where('school_id', $schoolId)
+                ->where('academic_year_id', $academicYear->id)
+                ->where('medium', $student->medium)
+                ->where('status', 'active')
+                ->first();
+            $admissionFeeAmount = $admissionFee ? $admissionFee->amount : 0;
+        }
+        
+        // Get Registration Fee
+        $registrationFeeAmount = 0;
+        if ($academicYear) {
+            $registrationFee = RegistrationFee::where('school_id', $schoolId)
+                ->where('academic_year_id', $academicYear->id)
+                ->where('medium', $student->medium)
+                ->where('status', 'active')
+                ->first();
+            $registrationFeeAmount = $registrationFee ? $registrationFee->amount : 0;
+        }
+        
+        // Get Class Fee (Monthly)
+        $classFeeAmount = 0;
+        if ($academicYear) {
+            $classFee = ClassFee::where('school_id', $schoolId)
+                ->where('academic_year_id', $academicYear->id)
+                ->where('class_id', $student->class_id)
+                ->where('medium', $student->medium)
+                ->first();
+            $classFeeAmount = $classFee ? $classFee->tuition_fee : 0;
+        }
+        
+        // Get Bus Fee
+        $busFeeAmount = 0;
+        if ($student->bus_destination_id) {
+            $busFee = BusFee::where('school_id', $schoolId)
+                ->where('id', $student->bus_destination_id)
+                ->where('status', 'active')
+                ->first();
+            $busFeeAmount = $busFee ? $busFee->fee : 0;
+        }
+        
+        // Get Bookset Price
+        $booksetPriceAmount = 0;
+        if ($academicYear) {
+            $booksetPrice = BooksetPrice::where('school_id', $schoolId)
+                ->where('academic_year_id', $academicYear->id)
+                ->where('medium', $student->medium)
+                ->where('status', 'active')
+                ->first();
+            $booksetPriceAmount = $booksetPrice ? $booksetPrice->total_price : 0;
+        }
+        
+        // Get old due and advance
+        $oldDue = StudentDue::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_due');
+            
+        $advance = StudentAdvance::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_advance');
+        
+        return view('students.fee-price-list', compact(
+            'student',
+            'admissionFeeAmount',
+            'registrationFeeAmount',
+            'classFeeAmount',
+            'busFeeAmount',
+            'booksetPriceAmount',
+            'oldDue',
+            'advance'
+        ));
     }
 
     /**
@@ -719,7 +1023,8 @@ class StudentController extends Controller
         $newAdvance = max(0, $amountPaid - $finalTotal);
 
         DB::transaction(function () use ($schoolId, $student, $request, $academicYear, $tuitionFee, $busFee, $subtotal, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $selectedMonths, $monthCount) {
-            // Create receipt
+            // Create receipt - use 'paid' or 'due' based on payment status
+            $receiptStatus = $newDue > 0 ? 'due' : 'paid';
             $receipt = Receipt::create([
                 'school_id' => $schoolId,
                 'student_id' => $student->id,
@@ -736,7 +1041,7 @@ class StudentController extends Controller
                 'description' => 'Monthly fees for: ' . implode(', ', array_map(function($m) { 
                     return date('F', mktime(0, 0, 0, $m, 1)); 
                 }, $selectedMonths)),
-                'status' => 'active',
+                'status' => $receiptStatus,
                 'created_by' => auth()->id(),
             ]);
 
@@ -797,6 +1102,384 @@ class StudentController extends Controller
 
         return redirect()->route('students.payment-history', $student->id)
             ->with('success', 'Payment processed successfully.');
+    }
+
+    /**
+     * Process fee collection from fee collection page.
+     */
+    public function collectFee(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'student_id' => 'required|exists:students,id',
+            'months' => 'required|array|min:1',
+            'billing_date' => 'required|date',
+            'payment_mode' => 'required|in:cash,online,cheque',
+            'discount' => 'nullable|numeric|min:0',
+            'amount_paid' => 'required|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $schoolId = auth()->user()->school_id;
+        $student = Student::where('school_id', $schoolId)
+            ->where('id', $request->student_id)
+            ->first();
+
+        if (!$student) {
+            return redirect()->back()->with('error', 'Student not found.');
+        }
+
+        $academicYear = AcademicYear::where('school_id', $schoolId)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$academicYear) {
+            return redirect()->back()->with('error', 'No active academic year found.');
+        }
+
+        // Get fees
+        $classFee = ClassFee::where('school_id', $schoolId)
+            ->where('academic_year_id', $academicYear->id)
+            ->where('class_id', $student->class_id)
+            ->where('medium', $student->medium)
+            ->first();
+        $tuitionFee = $classFee ? $classFee->tuition_fee : 0;
+
+        $busFee = 0;
+        if ($student->bus_destination_id) {
+            $busFeeRecord = BusFee::where('school_id', $schoolId)
+                ->where('id', $student->bus_destination_id)
+                ->first();
+            $busFee = $busFeeRecord ? $busFeeRecord->fee : 0;
+        }
+
+        $selectedMonths = $request->months;
+        $monthCount = count($selectedMonths);
+        $subtotal = ($tuitionFee + $busFee) * $monthCount;
+        $discount = $request->discount ?? 0;
+        $oldDue = StudentDue::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_due');
+        $advance = StudentAdvance::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_advance');
+
+        $finalTotal = $subtotal + $oldDue - $discount - $advance;
+        $amountPaid = $request->amount_paid;
+
+        $newDue = max(0, $finalTotal - $amountPaid);
+        $newAdvance = max(0, $amountPaid - $finalTotal);
+
+        // Generate receipt number
+        $lastReceipt = Receipt::where('school_id', $schoolId)
+            ->where('bill_type', 'monthly')
+            ->orderBy('receipt_no', 'desc')
+            ->first();
+
+        $receiptNo = $lastReceipt ? $lastReceipt->receipt_no + 1 : 1;
+
+        DB::transaction(function () use ($schoolId, $student, $request, $academicYear, $tuitionFee, $busFee, $subtotal, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $selectedMonths, $monthCount, $receiptNo) {
+            // Create receipt
+            $receiptStatus = $newDue > 0 ? 'due' : 'paid';
+            $receipt = Receipt::create([
+                'school_id' => $schoolId,
+                'student_id' => $student->id,
+                'receipt_no' => $receiptNo,
+                'bill_type' => 'monthly',
+                'total_amount' => $subtotal,
+                'discount' => $discount,
+                'paid_amount' => $amountPaid,
+                'due_amount' => $newDue,
+                'advance_amount' => $newAdvance,
+                'old_due_paid' => $oldDue,
+                'payment_mode' => $request->payment_mode,
+                'billing_date' => $request->billing_date,
+                'description' => 'Monthly fees for: ' . implode(', ', array_map(function($m) { 
+                    return date('F', mktime(0, 0, 0, $m, 1)); 
+                }, $selectedMonths)),
+                'status' => $receiptStatus,
+                'created_by' => auth()->id(),
+            ]);
+
+            // Create monthly payment records
+            foreach ($selectedMonths as $month) {
+                MonthlyPayment::create([
+                    'school_id' => $schoolId,
+                    'student_id' => $student->id,
+                    'academic_year_id' => $academicYear->id,
+                    'month' => $month,
+                    'tuition_fee' => $tuitionFee,
+                    'bus_fee' => $busFee,
+                    'total_fee' => $tuitionFee + $busFee,
+                    'discount' => $monthCount > 0 ? $discount / $monthCount : 0,
+                    'paid_amount' => $monthCount > 0 ? $amountPaid / $monthCount : 0,
+                    'receipt_no' => $receiptNo,
+                    'receipt_id' => $receipt->id,
+                    'payment_date' => $request->billing_date,
+                    'status' => 'paid',
+                ]);
+            }
+
+            // Update old due
+            if ($oldDue > 0) {
+                StudentDue::where('school_id', $schoolId)
+                    ->where('student_id', $student->id)
+                    ->delete();
+            }
+
+            // Update advance
+            $currentAdvance = StudentAdvance::where('school_id', $schoolId)
+                ->where('student_id', $student->id)
+                ->first();
+                
+            if ($currentAdvance) {
+                if ($newAdvance > 0) {
+                    $currentAdvance->update(['total_advance' => $newAdvance]);
+                } else {
+                    $currentAdvance->delete();
+                }
+            } elseif ($newAdvance > 0) {
+                StudentAdvance::create([
+                    'school_id' => $schoolId,
+                    'student_id' => $student->id,
+                    'academic_year_id' => $academicYear->id,
+                    'total_advance' => $newAdvance,
+                ]);
+            }
+
+            // Create new due if any
+            if ($newDue > 0) {
+                StudentDue::updateOrCreate(
+                    ['school_id' => $schoolId, 'student_id' => $student->id, 'academic_year_id' => $academicYear->id],
+                    ['total_due' => $newDue]
+                );
+            }
+        });
+
+        return redirect()->route('students.fee-collection', ['student_id' => $student->id])
+            ->with('success', 'Payment processed successfully. Receipt No: ' . $receiptNo);
+    }
+
+    /**
+     * Show receipt for a payment.
+     */
+    public function showReceipt(MonthlyPayment $payment)
+    {
+        $this->authorizeSchool($payment);
+        
+        $payment->load('student.schoolClass', 'academicYear');
+        
+        return view('students.receipt', compact('payment'));
+    }
+
+    /**
+     * Show bill history - all bills/receipts for the school.
+     */
+    public function billHistory(Request $request)
+    {
+        $schoolId = auth()->user()->school_id;
+        
+        // Get filter parameters
+        $searchType = $request->input('search_type', 'receipt');
+        $query = $request->input('query', '');
+        $billType = $request->input('bill_type', '');
+        $status = $request->input('status', '');
+        $fromDate = $request->input('from_date', '');
+        $toDate = $request->input('to_date', '');
+        
+        // Build the receipts query
+        $receiptsQuery = Receipt::with(['student.schoolClass'])
+            ->where('school_id', $schoolId);
+        
+        // Apply search filter
+        if ($query) {
+            if ($searchType === 'receipt') {
+                $receiptsQuery->where('receipt_no', 'like', '%' . $query . '%');
+            } elseif ($searchType === 'student') {
+                $receiptsQuery->whereHas('student', function($q) use ($query) {
+                    $q->where('name', 'like', '%' . $query . '%');
+                });
+            } elseif ($searchType === 'phone') {
+                $receiptsQuery->whereHas('student', function($q) use ($query) {
+                    $q->where('phone', 'like', '%' . $query . '%');
+                });
+            }
+        }
+        
+        // Apply bill type filter
+        if ($billType) {
+            $receiptsQuery->where('bill_type', $billType);
+        }
+        
+        // Apply status filter
+        if ($status) {
+            $receiptsQuery->where('status', $status);
+        }
+        
+        // Apply date filters
+        if ($fromDate) {
+            $receiptsQuery->where('billing_date', '>=', $fromDate);
+        }
+        
+        if ($toDate) {
+            $receiptsQuery->where('billing_date', '<=', $toDate);
+        }
+        
+        // Get paginated receipts
+        $receipts = $receiptsQuery->orderBy('billing_date', 'desc')
+            ->orderBy('receipt_no', 'desc')
+            ->paginate(20);
+        
+        // Calculate summary statistics
+        $totalReceipts = Receipt::where('school_id', $schoolId)->count();
+        $totalAmount = Receipt::where('school_id', $schoolId)->sum('total_amount');
+        $totalPaid = Receipt::where('school_id', $schoolId)->sum('paid_amount');
+        $totalDue = Receipt::where('school_id', $schoolId)->sum('due_amount');
+        
+        return view('students.bill-history', compact(
+            'receipts',
+            'totalReceipts',
+            'totalAmount',
+            'totalPaid',
+            'totalDue',
+            'searchType',
+            'query',
+            'billType',
+            'status',
+            'fromDate',
+            'toDate'
+        ));
+    }
+
+    /**
+     * Show receipt by receipt ID (from bill history).
+     */
+    public function showReceiptById(Receipt $receipt)
+    {
+        $this->authorizeSchool($receipt);
+        
+        $receipt->load('student.schoolClass');
+        
+        // Check if it's an admission bill
+        if ($receipt->bill_type === 'admission') {
+            return view('students.admission-receipt', compact('receipt'));
+        }
+        
+        return view('students.receipt', compact('receipt'));
+    }
+
+    /**
+     * AJAX: Get bill history with filters (real-time filtering).
+     */
+    public function billHistoryAjax(Request $request)
+    {
+        $schoolId = auth()->user()->school_id;
+        
+        // Get filter parameters
+        $searchType = $request->input('search_type', 'receipt');
+        $query = $request->input('query', '');
+        $billType = $request->input('bill_type', '');
+        $status = $request->input('status', '');
+        $fromDate = $request->input('from_date', '');
+        $toDate = $request->input('to_date', '');
+        
+        // Build the receipts query for filtering
+        $receiptsQuery = Receipt::query()
+            ->where('school_id', $schoolId);
+        
+        // Apply search filter
+        if ($query) {
+            if ($searchType === 'receipt') {
+                $receiptsQuery->where('receipt_no', 'like', '%' . $query . '%');
+            } elseif ($searchType === 'student') {
+                $receiptsQuery->whereHas('student', function($q) use ($query) {
+                    $q->where('name', 'like', '%' . $query . '%');
+                });
+            } elseif ($searchType === 'phone') {
+                $receiptsQuery->whereHas('student', function($q) use ($query) {
+                    $q->where('phone', 'like', '%' . $query . '%');
+                });
+            }
+        }
+        
+        // Apply bill type filter
+        if ($billType) {
+            $receiptsQuery->where('bill_type', $billType);
+        }
+        
+        // Apply status filter
+        if ($status) {
+            $receiptsQuery->where('status', $status);
+        }
+        
+        // Apply date filters
+        if ($fromDate) {
+            $receiptsQuery->where('billing_date', '>=', $fromDate);
+        }
+        
+        if ($toDate) {
+            $receiptsQuery->where('billing_date', '<=', $toDate);
+        }
+        
+        // Get total counts and sums before pagination
+        $totalReceipts = (clone $receiptsQuery)->count();
+        $totalAmount = (clone $receiptsQuery)->sum('total_amount');
+        $totalPaid = (clone $receiptsQuery)->sum('paid_amount');
+        $totalDue = (clone $receiptsQuery)->sum('due_amount');
+        
+        // Get paginated receipts with relationships
+        $receipts = $receiptsQuery->with(['student', 'student.schoolClass'])
+            ->orderBy('billing_date', 'desc')
+            ->orderBy('receipt_no', 'desc')
+            ->paginate(20);
+        
+        // Transform receipts to array with relationships
+        $receiptsArray = $receipts->toArray();
+        $receiptsData = $receiptsArray['data'];
+        
+        // Reformat for JSON with proper relationship data
+        $formattedReceipts = array_map(function($receipt) {
+            return [
+                'id' => $receipt['id'],
+                'receipt_no' => $receipt['receipt_no'],
+                'billing_date' => $receipt['billing_date'],
+                'bill_type' => $receipt['bill_type'],
+                'total_amount' => $receipt['total_amount'],
+                'paid_amount' => $receipt['paid_amount'],
+                'due_amount' => $receipt['due_amount'],
+                'status' => $receipt['status'],
+                'student' => $receipt['student'] ? [
+                    'id' => $receipt['student']['id'],
+                    'name' => $receipt['student']['name'],
+                    'student_id' => $receipt['student']['student_id'],
+                    'school_class' => $receipt['student']['school_class'] ? [
+                        'class_name' => $receipt['student']['school_class']['class_name']
+                    ] : null
+                ] : null
+            ];
+        }, $receiptsData);
+        
+        return response()->json([
+            'receipts' => $formattedReceipts,
+            'pagination' => [
+                'current_page' => $receipts->currentPage(),
+                'last_page' => $receipts->lastPage(),
+                'per_page' => $receipts->perPage(),
+                'total' => $receipts->total(),
+                'next_page_url' => $receipts->nextPageUrl(),
+                'prev_page_url' => $receipts->previousPageUrl(),
+            ],
+            'summary' => [
+                'totalReceipts' => $totalReceipts,
+                'totalAmount' => $totalAmount,
+                'totalPaid' => $totalPaid,
+                'totalDue' => $totalDue,
+            ]
+        ]);
     }
 
     /**

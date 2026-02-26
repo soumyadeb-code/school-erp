@@ -138,6 +138,18 @@
                                 Admission
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('students.registration') }}">
+                                <i class="fas fa-user-check"></i>
+                                Registration
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('students.list') }}">
+                                <i class="fas fa-list"></i>
+                                All Students
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </li>
@@ -147,6 +159,14 @@
                 <a class="nav-link" href="{{ route('students.fee-collection') }}">
                     <i class="fas fa-hand-holding-usd"></i>
                     Fee Collection
+                </a>
+            </li>
+            
+            <!-- Bill History -->
+            <li class="nav-item">
+                <a class="nav-link" href="{{ route('students.bill-history') }}">
+                    <i class="fas fa-history"></i>
+                    Bill History
                 </a>
             </li>
             
