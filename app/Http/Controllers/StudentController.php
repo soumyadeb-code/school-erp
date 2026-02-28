@@ -536,8 +536,10 @@ class StudentController extends Controller
             return $receipt;
         });
 
+        // Redirect with receipt ID to open in new window
         return redirect()->route('students.admission')
-            ->with('success', 'Admission billing completed successfully.');
+            ->with('success', 'Admission billing completed successfully.')
+            ->with('receipt_id', $receipt->id);
     }
 
     /**
@@ -1411,9 +1413,12 @@ class StudentController extends Controller
         
         $receipt->load('student.schoolClass');
         
-        // Check if it's an admission bill
+        // Get school data for the receipt
+        $school = \App\Models\School::find($receipt->school_id);
+        
+        // Check if it's an admission bill - use the new print format
         if ($receipt->bill_type === 'admission') {
-            return view('students.admission-receipt', compact('receipt'));
+            return view('students.admission-receipt-print', compact('receipt', 'school'));
         }
         
         return view('students.receipt', compact('receipt'));

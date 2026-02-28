@@ -41,6 +41,10 @@ class SchoolAdminController extends Controller
         $tcStudents = Student::where('school_id', $schoolId)
             ->where('status', 'tc_issued')->count();
         
+        // Admission students count (completed admission)
+        $admissionStudents = Student::where('school_id', $schoolId)
+            ->where('admission_status', 'completed')->count();
+        
         // Financial statistics
         $totalIncome = Receipt::where('school_id', $schoolId)
             ->where('status', 'active')
@@ -94,6 +98,7 @@ class SchoolAdminController extends Controller
             'totalStudents',
             'activeStudents',
             'tcStudents',
+            'admissionStudents',
             'totalIncome',
             'monthlyCollection',
             'dueStudents',

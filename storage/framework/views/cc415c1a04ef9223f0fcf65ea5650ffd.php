@@ -1,8 +1,8 @@
-@extends('layouts.app')
 
-@section('title', 'Bill History - School ERP')
 
-@section('content')
+<?php $__env->startSection('title', 'Bill History - School ERP'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
@@ -17,7 +17,7 @@
                             <div class="card bg-primary text-white">
                                 <div class="card-body">
                                     <h5>Total Bills</h5>
-                                    <h3 id="totalReceipts">{{ $totalReceipts }}</h3>
+                                    <h3 id="totalReceipts"><?php echo e($totalReceipts); ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -25,7 +25,7 @@
                             <div class="card bg-info text-white">
                                 <div class="card-body">
                                     <h5>Total Amount</h5>
-                                    <h3 id="totalAmount">₹{{ number_format($totalAmount, 2) }}</h3>
+                                    <h3 id="totalAmount">₹<?php echo e(number_format($totalAmount, 2)); ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -33,7 +33,7 @@
                             <div class="card bg-success text-white">
                                 <div class="card-body">
                                     <h5>Total Paid</h5>
-                                    <h3 id="totalPaid">₹{{ number_format($totalPaid, 2) }}</h3>
+                                    <h3 id="totalPaid">₹<?php echo e(number_format($totalPaid, 2)); ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -41,7 +41,7 @@
                             <div class="card bg-warning text-white">
                                 <div class="card-body">
                                     <h5>Total Due</h5>
-                                    <h3 id="totalDue">₹{{ number_format($totalDue, 2) }}</h3>
+                                    <h3 id="totalDue">₹<?php echo e(number_format($totalDue, 2)); ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -105,65 +105,69 @@
                                 </tr>
                             </thead>
                             <tbody id="billsTableBody">
-                                @forelse($receipts as $receipt)
+                                <?php $__empty_1 = true; $__currentLoopData = $receipts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $receipt): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                                 <tr>
-                                    <td>{{ $receipt->receipt_no }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($receipt->billing_date)->format('d-m-Y') }}</td>
+                                    <td><?php echo e($receipt->receipt_no); ?></td>
+                                    <td><?php echo e(\Carbon\Carbon::parse($receipt->billing_date)->format('d-m-Y')); ?></td>
                                     <td>
-                                        @if($receipt->student)
-                                            {{ $receipt->student->name }}
+                                        <?php if($receipt->student): ?>
+                                            <?php echo e($receipt->student->name); ?>
+
                                             <br>
-                                            <small class="text-muted">{{ $receipt->student->student_id }}</small>
-                                        @else
+                                            <small class="text-muted"><?php echo e($receipt->student->student_id); ?></small>
+                                        <?php else: ?>
                                             N/A
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                                     <td>
-                                        @if($receipt->student && $receipt->student->schoolClass)
-                                            {{ $receipt->student->schoolClass->class_name }}
-                                        @else
+                                        <?php if($receipt->student && $receipt->student->schoolClass): ?>
+                                            <?php echo e($receipt->student->schoolClass->class_name); ?>
+
+                                        <?php else: ?>
                                             N/A
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                                     <td>
-                                        @if($receipt->bill_type == 'admission')
+                                        <?php if($receipt->bill_type == 'admission'): ?>
                                             <span class="badge bg-primary">Admission</span>
-                                        @elseif($receipt->bill_type == 'monthly')
+                                        <?php elseif($receipt->bill_type == 'monthly'): ?>
                                             <span class="badge bg-info">Monthly</span>
-                                        @else
-                                            {{ ucfirst($receipt->bill_type) }}
-                                        @endif
+                                        <?php else: ?>
+                                            <?php echo e(ucfirst($receipt->bill_type)); ?>
+
+                                        <?php endif; ?>
                                     </td>
-                                    <td>₹{{ number_format($receipt->total_amount, 2) }}</td>
-                                    <td>₹{{ number_format($receipt->paid_amount, 2) }}</td>
-                                    <td>₹{{ number_format($receipt->due_amount, 2) }}</td>
+                                    <td>₹<?php echo e(number_format($receipt->total_amount, 2)); ?></td>
+                                    <td>₹<?php echo e(number_format($receipt->paid_amount, 2)); ?></td>
+                                    <td>₹<?php echo e(number_format($receipt->due_amount, 2)); ?></td>
                                     <td>
-                                        @if($receipt->status == 'paid')
+                                        <?php if($receipt->status == 'paid'): ?>
                                             <span class="badge bg-success">Paid</span>
-                                        @elseif($receipt->status == 'due')
+                                        <?php elseif($receipt->status == 'due'): ?>
                                             <span class="badge bg-warning">Due</span>
-                                        @else
-                                            <span class="badge bg-secondary">{{ ucfirst($receipt->status) }}</span>
-                                        @endif
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary"><?php echo e(ucfirst($receipt->status)); ?></span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a href="{{ route('students.receipt-view', $receipt->id) }}" class="btn btn-sm btn-info" title="View Receipt">
+                                        <a href="<?php echo e(route('students.receipt-view', $receipt->id)); ?>" class="btn btn-sm btn-info" title="View Receipt">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </td>
                                 </tr>
-                                @empty
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                 <tr>
                                     <td colspan="10" class="text-center">No bills found</td>
                                 </tr>
-                                @endforelse
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
 
                     <!-- Pagination -->
                     <div class="d-flex justify-content-center" id="paginationLinks">
-                        {{ $receipts->links() }}
+                        <?php echo e($receipts->links()); ?>
+
                     </div>
                 </div>
             </div>
@@ -171,7 +175,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 $(document).ready(function() {
     // Load data on page load via AJAX
@@ -196,7 +200,7 @@ $(document).ready(function() {
         const toDate = $('#to_date').val();
 
         $.ajax({
-            url: '{{ route("students.bill-history.ajax") }}',
+            url: '<?php echo e(route("students.bill-history.ajax")); ?>',
             type: 'GET',
             data: {
                 search_type: searchType,
@@ -335,5 +339,7 @@ $(document).ready(function() {
     });
 });
 </script>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH E:\AI\Laravel\Blackbox-school\resources\views/students/bill-history.blade.php ENDPATH**/ ?>

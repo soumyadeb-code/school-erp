@@ -193,5 +193,20 @@ function handleDelete(button) {
     // Submit the form normally
     form.submit();
 }
+
+// Check for receipt_id in session and open in new tab
+document.addEventListener('DOMContentLoaded', function() {
+    @if(session('receipt_id'))
+    // Open the receipt in a new tab
+    const receiptUrl = '{{ route("students.receipt-view", session("receipt_id")) }}';
+    const link = document.createElement('a');
+    link.href = receiptUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    @endif
+});
 </script>
 @endsection
