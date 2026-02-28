@@ -1,0 +1,8 @@
+# Fonts Folder
+
+Place your custom fonts here (e.g., Poppins-Bold.ttf).
+
+The PDF generation system will look for:
+- /fonts/Poppins-Bold.ttf
+
+Make sure the font file is accessible in the public/fonts directory.

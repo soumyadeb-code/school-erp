@@ -1,20 +1,20 @@
-@extends('layouts.app')
 
-@section('title', 'Admission Billing')
 
-@section('page-title', 'Admission Billing')
+<?php $__env->startSection('title', 'Admission Billing'); ?>
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('students.admission') }}">Admission</a></li>
+<?php $__env->startSection('page-title', 'Admission Billing'); ?>
+
+<?php $__env->startSection('breadcrumb'); ?>
+    <li class="breadcrumb-item"><a href="<?php echo e(url('/dashboard')); ?>">Home</a></li>
+    <li class="breadcrumb-item"><a href="<?php echo e(route('students.admission')); ?>">Admission</a></li>
     <li class="breadcrumb-item active">Billing</li>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <!-- PDF-lib Library -->
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
-@php
+<?php
 use App\Models\BillLayout;
 $schoolId = auth()->user()->school_id;
 $defaultLayouts = BillLayout::getDefaultAdmissionLayout();
@@ -35,43 +35,43 @@ try {
     // If table doesn't exist, use defaults
     $layoutData = $defaultLayouts;
 }
-@endphp
+?>
 
 <div class="card">
     <div class="card-header">
-        <h5>Admission Billing - {{ $student->name }} ({{ $student->student_id }})</h5>
+        <h5>Admission Billing - <?php echo e($student->name); ?> (<?php echo e($student->student_id); ?>)</h5>
     </div>
     <div class="card-body">
-        <form id="bill-form" action="{{ route('students.billing.process', $student->id) }}" method="POST">
-            @csrf
+        <form id="bill-form" action="<?php echo e(route('students.billing.process', $student->id)); ?>" method="POST">
+            <?php echo csrf_field(); ?>
             
             <div class="row">
                 <!-- LEFT SIDE -->
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">Receipt No:</label>
-                        <input type="text" class="form-control" name="receipt_no" id="receiptNo" value="{{ $receiptNo }}" required>
+                        <input type="text" class="form-control" name="receipt_no" id="receiptNo" value="<?php echo e($receiptNo); ?>" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Student Name:</label>
-                        <input type="text" class="form-control" id="studentName" value="{{ $student->name }}" readonly>
-                        <input type="hidden" id="studentSchoolId" value="{{ $student->student_id }}">
+                        <input type="text" class="form-control" id="studentName" value="<?php echo e($student->name); ?>" readonly>
+                        <input type="hidden" id="studentSchoolId" value="<?php echo e($student->student_id); ?>">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Class:</label>
-                        <input type="text" class="form-control" id="studentClass" value="{{ $student->schoolClass ? $student->schoolClass->class_name : '-' }}" readonly>
+                        <input type="text" class="form-control" id="studentClass" value="<?php echo e($student->schoolClass ? $student->schoolClass->class_name : '-'); ?>" readonly>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Less Advance:</label>
-                        <input type="text" class="form-control" id="lessAdvance" value="{{ $advance }}" readonly>
+                        <input type="text" class="form-control" id="lessAdvance" value="<?php echo e($advance); ?>" readonly>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Old Due:</label>
-                        <input type="text" class="form-control" id="oldDueVal" value="{{ $oldDue }}" readonly>
+                        <input type="text" class="form-control" id="oldDueVal" value="<?php echo e($oldDue); ?>" readonly>
                     </div>
 
                     <div class="mb-3">
@@ -95,12 +95,12 @@ try {
                     <div class="mb-3">
                         <label class="form-label">Fee Type:</label>
                         <input type="text" class="form-control" id="feeType" value="Admission" readonly>
-                        <input type="hidden" id="feeValue" value="{{ $admissionFee ? $admissionFee->amount : 0 }}">
+                        <input type="hidden" id="feeValue" value="<?php echo e($admissionFee ? $admissionFee->amount : 0); ?>">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Date:</label>
-                        <input type="date" class="form-control" name="billing_date" id="billingDate" value="{{ date('Y-m-d') }}" required>
+                        <input type="date" class="form-control" name="billing_date" id="billingDate" value="<?php echo e(date('Y-m-d')); ?>" required>
                     </div>
 
                     <div class="mb-3">
@@ -131,14 +131,14 @@ try {
                     </div>
 
 <!-- Hidden fields for PDF data -->
-                    <input type="hidden" id="admissionYear" value="{{ $academicYear ? $academicYear->year : date('Y') }}">
+                    <input type="hidden" id="admissionYear" value="<?php echo e($academicYear ? $academicYear->year : date('Y')); ?>">
                     
                     <!-- Hidden field for layout coordinates -->
-                    <input type="hidden" id="billLayoutData" value="{{ json_encode($layoutData) }}">
+                    <input type="hidden" id="billLayoutData" value="<?php echo e(json_encode($layoutData)); ?>">
 
                     <div class="text-center">
                         <button type="submit" class="btn btn-primary mt-3" id="submitBtn">Submit & Generate PDF</button>
-                        <a href="{{ route('students.admission') }}" class="btn btn-secondary mt-3">Cancel</a>
+                        <a href="<?php echo e(route('students.admission')); ?>" class="btn btn-secondary mt-3">Cancel</a>
                     </div>
                 </div>
             </div>
@@ -251,8 +251,8 @@ document.addEventListener("DOMContentLoaded", function() {
     // PDF Generation Function
     async function generateAdmissionPDF() {
         try {
-// Load PDF template from public folder
-            const templateUrl = '/pdf-templates/admission_template.pdf';
+            // Load PDF template from public folder
+            const templateUrl = '/pdf-templates/admission_registration.pdf';
             
             // Fetch the template
             const response = await fetch(templateUrl);
@@ -576,4 +576,6 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH E:\AI\Laravel\Blackbox-school\resources\views/students/admission-billing.blade.php ENDPATH**/ ?>

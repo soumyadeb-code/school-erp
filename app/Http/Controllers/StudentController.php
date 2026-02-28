@@ -541,6 +541,53 @@ class StudentController extends Controller
     }
 
     /**
+     * Generate admission PDF data (API endpoint for frontend PDF generation).
+     */
+    public function generateAdmissionData(Request $request)
+    {
+        $schoolId = auth()->user()->school_id;
+        
+        $validator = Validator::make($request->all(), [
+            'receipt_no' => 'required',
+            'student_name' => 'required',
+            'students_school_id' => 'required',
+            'class' => 'required',
+            'fee_amount' => 'required|numeric',
+            'discount' => 'nullable|numeric',
+            'less_advance' => 'nullable|numeric',
+            'old_due' => 'nullable|numeric',
+            'new_due' => 'nullable|numeric',
+            'amount_paid' => 'required|numeric',
+            'payment_mode' => 'required',
+            'billing_date' => 'required|date',
+            'fee_type' => 'required',
+            'academic_year' => 'nullable',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        return response()->json([
+            'receipt_no' => $request->receipt_no,
+            'student_name' => $request->student_name,
+            'students_school_id' => $request->students_school_id,
+            'class' => $request->class,
+            'fee_amount' => $request->fee_amount,
+            'discount' => $request->discount ?? 0,
+            'less_advance' => $request->less_advance ?? 0,
+            'old_due' => $request->old_due ?? 0,
+            'new_due' => $request->new_due ?? 0,
+            'amount_paid' => $request->amount_paid,
+            'payment_mode' => strtoupper($request->payment_mode),
+            'total_amount' => $request->total_amount ?? 0,
+            'billing_date' => $request->billing_date,
+            'fee_type' => $request->fee_type,
+            'academic_year' => $request->academic_year ?? date('Y'),
+        ]);
+    }
+
+    /**
      * Show student profile.
      */
     public function show(Student $student)

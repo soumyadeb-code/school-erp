@@ -1,0 +1,12 @@
+# PDF Templates Folder
+
+Place your PDF templates here (e.g., admission_registration.pdf).
+
+The system will:
+1. First try to load your template from /pdf-templates/admission_registration.pdf
+2. If template exists, fill in the form fields and/or place text at X/Y coordinates
+3. If template not found, generate a blank PDF with the receipt details
+
+For the template:
+- Add form fields with names like: ReceiptNo, StudentName, SchoolId, Class, FeeAmount, Discount, Advance, OldDue, NewDue, PaymentMode, TotalAmount, AmountPaid, Date, FeeType, Year
+- Or the system will place text at default X/Y coordinates

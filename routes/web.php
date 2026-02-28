@@ -5,6 +5,7 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SchoolAdminController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\MaintenanceController;
+use App\Http\Controllers\BillLayoutController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 
@@ -136,9 +137,16 @@ Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->na
         Route::put('/fees/bookset/{booksetPrice}', [SchoolAdminController::class, 'updateBooksetPrice'])->name('fees.bookset.update');
         Route::delete('/fees/bookset/{booksetPrice}', [SchoolAdminController::class, 'destroyBooksetPrice'])->name('fees.bookset.destroy');
         
-        Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->name('fees.discount');
+Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->name('fees.discount');
         Route::post('/fees/discount', [SchoolAdminController::class, 'storeDiscountRule'])->name('fees.discount.store');
-        
+
+// Bill Layouts
+        Route::get('/bill-layouts/designer', [BillLayoutController::class, 'designer'])->name('bill-layouts.designer');
+        Route::post('/bill-layouts', [BillLayoutController::class, 'store'])->name('bill-layouts.store');
+        Route::post('/bill-layouts/upload', [BillLayoutController::class, 'upload'])->name('bill-layouts.upload');
+        Route::get('/bill-layouts/reset', [BillLayoutController::class, 'reset'])->name('bill-layouts.reset');
+        Route::get('/bill-layouts/api', [BillLayoutController::class, 'getLayouts'])->name('bill-layouts.api');
+
         // School Profile
         Route::get('/profile', [SchoolAdminController::class, 'profile'])->name('profile');
         Route::put('/profile', [SchoolAdminController::class, 'updateProfile'])->name('profile.update');
@@ -175,6 +183,9 @@ Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->na
         // Admission
         Route::get('/admission', [StudentController::class, 'admission'])->name('admission');
         Route::post('/admission', [StudentController::class, 'storeStudent'])->name('admission.store');
+        
+        // Generate Admission PDF Data (API endpoint)
+        Route::post('/generate-admission-data', [StudentController::class, 'generateAdmissionData'])->name('generate-admission-data');
         
         // Registration
         Route::get('/registration', [StudentController::class, 'registration'])->name('registration');
