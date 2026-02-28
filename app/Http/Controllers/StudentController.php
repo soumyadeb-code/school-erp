@@ -536,8 +536,8 @@ class StudentController extends Controller
             return $receipt;
         });
 
-        return redirect()->route('students.receipt-view', $receipt->id)
-            ->with('success', 'Admission billing completed successfully. Please print the receipt.');
+        return redirect()->route('students.admission')
+            ->with('success', 'Admission billing completed successfully.');
     }
 
     /**

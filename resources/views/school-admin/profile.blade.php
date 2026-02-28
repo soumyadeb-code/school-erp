@@ -32,6 +32,15 @@
                             @enderror
                         </div>
                         <div class="col-md-6">
+                            <label for="trust_name" class="form-label">Trust Name</label>
+                            <input type="text" class="form-control" 
+                                id="trust_name" name="trust_name" 
+                                value="{{ old('trust_name', $school->trust_name) }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
                             <label for="code" class="form-label">School Code <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('code') is-invalid @enderror" 
                                 id="code" name="code" 

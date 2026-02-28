@@ -26,10 +26,11 @@ class BillLayoutController extends Controller
         // Merge defaults with saved layouts
         $variables = [];
         $allVariables = array_keys($defaultLayouts);
+        $variableLabels = BillLayout::getVariableLabels();
         
         foreach ($allVariables as $var) {
             $variables[$var] = [
-                'label' => self::getVariableLabel($var),
+                'label' => $variableLabels[$var] ?? ucfirst(str_replace('_', ' ', $var)),
                 'x' => $layouts[$var]->x_position ?? $defaultLayouts[$var]['x'],
                 'y' => $layouts[$var]->y_position ?? $defaultLayouts[$var]['y'],
                 'font_size' => $layouts[$var]->font_size ?? $defaultLayouts[$var]['font_size'],

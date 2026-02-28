@@ -22,6 +22,7 @@
                 <thead>
                     <tr>
                         <th>School Name</th>
+                        <th>Trust Name</th>
                         <th>School Code</th>
                         <th>Email</th>
                         <th>Phone</th>
@@ -35,6 +36,7 @@
                     @forelse($schools as $school)
                     <tr>
                         <td>{{ $school->name }}</td>
+                        <td>{{ $school->trust_name ?? 'N/A' }}</td>
                         <td><span class="badge bg-secondary">{{ $school->code }}</span></td>
                         <td>{{ $school->email }}</td>
                         <td>{{ $school->phone }}</td>
@@ -60,7 +62,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="9" class="text-center text-muted py-4">
                             No schools found. <a href="{{ route('super-admin.schools.create') }}">Create your first school</a>
                         </td>
                     </tr>

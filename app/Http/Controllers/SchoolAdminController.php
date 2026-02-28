@@ -1027,7 +1027,7 @@ public function storeBooksetPrice(Request $request)
                 ->withInput();
         }
 
-        $school->update($request->only(['name', 'code', 'email', 'address', 'phone']));
+        $school->update($request->only(['name', 'trust_name', 'code', 'email', 'address', 'phone']));
 
         return redirect()->back()->with('success', 'School profile updated successfully.');
     }

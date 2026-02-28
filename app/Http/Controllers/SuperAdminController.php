@@ -59,6 +59,7 @@ class SuperAdminController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
+            'trust_name' => 'nullable|string|max:255',
             'code' => 'required|string|max:10|unique:schools',
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
@@ -79,6 +80,7 @@ class SuperAdminController extends Controller
         // Create school
         $school = School::create([
             'name' => $request->name,
+            'trust_name' => $request->trust_name,
             'code' => $request->code,
             'address' => $request->address,
             'phone' => $request->phone,
@@ -141,7 +143,7 @@ class SuperAdminController extends Controller
                 ->withInput();
         }
 
-        $school->update($request->only(['name', 'code', 'address', 'phone', 'email', 'joining_date', 'expiry_date', 'status']));
+        $school->update($request->only(['name', 'trust_name', 'code', 'address', 'phone', 'email', 'joining_date', 'expiry_date', 'status']));
 
         return redirect()->route('super-admin.schools.index')
             ->with('success', 'School updated successfully.');
