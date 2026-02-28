@@ -16,6 +16,8 @@ use App\Models\StudentAdvance;
 use App\Models\Receipt;
 use App\Models\MonthlyPayment;
 use App\Models\StudentAcademicHistory;
+use App\Models\StudentAdmission;
+use App\Models\StudentEnrollment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;

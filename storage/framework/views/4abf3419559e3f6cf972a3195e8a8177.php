@@ -288,10 +288,10 @@
                         <td class="student-name"><?php echo e($student->name); ?></td>
                         <td><?php echo e($student->schoolClass ? $student->schoolClass->class_name : 'N/A'); ?></td>
                         <td>
-                            <?php if($student->schoolClass && $student->schoolClass->nextClass): ?>
+                            <?php if($student->nextClass): ?>
                             <span class="next-class-pill">
                                 <i class="fas fa-arrow-right"></i>
-                                <?php echo e($student->schoolClass->nextClass->class_name); ?>
+                                <?php echo e($student->nextClass->class_name); ?>
 
                             </span>
                             <?php else: ?>

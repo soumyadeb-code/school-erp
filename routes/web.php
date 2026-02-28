@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SchoolAdminController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
@@ -146,6 +147,15 @@ Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->n
         Route::post('/bill-layouts/upload', [BillLayoutController::class, 'upload'])->name('bill-layouts.upload');
         Route::get('/bill-layouts/reset', [BillLayoutController::class, 'reset'])->name('bill-layouts.reset');
         Route::get('/bill-layouts/api', [BillLayoutController::class, 'getLayouts'])->name('bill-layouts.api');
+
+        // Student Promotions
+        Route::get('/promotions', [PromotionController::class, 'index'])->name('promotions.index');
+        Route::get('/promotions/create', [PromotionController::class, 'create'])->name('promotions.create');
+        Route::post('/promotions', [PromotionController::class, 'store'])->name('promotions.store');
+        Route::post('/promotions/{student}/promote-single', [PromotionController::class, 'promoteSingle'])->name('promotions.promote-single');
+        Route::get('/promotions/history', [PromotionController::class, 'history'])->name('promotions.history');
+        Route::post('/promotions/{student}/issue-tc', [PromotionController::class, 'issueTC'])->name('promotions.issue-tc');
+        Route::get('/promotions/{student}/enrollments', [PromotionController::class, 'studentEnrollments'])->name('promotions.student-enrollments');
 
         // School Profile
         Route::get('/profile', [SchoolAdminController::class, 'profile'])->name('profile');

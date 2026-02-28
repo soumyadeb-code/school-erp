@@ -177,6 +177,14 @@
                 </a>
             </li>
             
+            <!-- Promotions -->
+            <li class="nav-item">
+                <a class="nav-link" href="<?php echo e(route('school-admin.promotions.index')); ?>">
+                    <i class="fas fa-arrow-up"></i>
+                    Promotions
+                </a>
+            </li>
+            
             <!-- Maintenance -->
             <li class="nav-item">
                 <a class="nav-link" href="<?php echo e(route('school-admin.maintenance.index')); ?>">

@@ -124,11 +124,81 @@ class Student extends Model
     }
 
     /**
+     * Get the student's admission record (first admission - never changes).
+     */
+    public function admission(): HasOne
+    {
+        return $this->hasOne(StudentAdmission::class);
+    }
+
+    /**
+     * Get all enrollments for this student.
+     */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(StudentEnrollment::class);
+    }
+
+    /**
+     * Get the student's current enrollment (based on active academic year).
+     */
+    public function currentEnrollment(): HasOne
+    {
+        return $this->hasOne(StudentEnrollment::class)->latestOfMany();
+    }
+
+    /**
+     * Get promotion history for this student.
+     */
+    public function promotions(): HasMany
+    {
+        return $this->hasMany(StudentPromotion::class);
+    }
+
+    /**
      * Calculate age from DOB.
      */
     public function getAge(): int
     {
         return $this->dob->age;
+    }
+
+    /**
+     * Get the next class for this student based on their current class.
+     * Priority:
+     * 1. Use manual next_class_id if set on current class
+     * 2. Find next class by comparing minimum_age with current class
+     */
+    public function nextClass()
+    {
+        // Get the current class
+        $currentClass = $this->schoolClass;
+        
+        if (!$currentClass) {
+            return null;
+        }
+        
+        // 1. First check if manual next_class_id is set
+        if ($currentClass->next_class_id) {
+            return SchoolClass::find($currentClass->next_class_id);
+        }
+        
+        // 2. Find the immediate next class based on minimum_age
+        // Get current class minimum_age and find the next class with higher minimum_age
+        $currentMinAge = $currentClass->minimum_age;
+        
+        $nextClass = SchoolClass::where('school_id', $this->school_id)
+            ->where('status', 'active')
+            ->where('minimum_age', '>', $currentMinAge)
+            ->orderBy('minimum_age', 'asc')
+            ->first();
+        
+        // If no class with higher minimum_age found, return null (no promotion possible)
+        if (!$nextClass) {
+            return null;
+        }
+        
+        return $nextClass;
     }
 
     /**
