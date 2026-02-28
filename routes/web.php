@@ -190,6 +190,11 @@ Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->n
         // Registration
         Route::get('/registration', [StudentController::class, 'registration'])->name('registration');
         
+        // Registration Billing
+        Route::get('/{student}/registration-billing', [StudentController::class, 'registrationBilling'])->name('registration-billing');
+        Route::post('/{student}/registration-billing', [StudentController::class, 'processRegistrationBilling'])->name('registration-billing.process');
+        
+        // Admission Billing
         Route::get('/{student}/billing', [StudentController::class, 'admissionBilling'])->name('billing');
         Route::post('/{student}/billing', [StudentController::class, 'processAdmissionBilling'])->name('billing.process');
         

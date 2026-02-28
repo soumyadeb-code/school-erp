@@ -18,6 +18,7 @@ class SchoolClass extends Model
         'class_name',
         'minimum_age',
         'status',
+        'next_class_id',
     ];
 
     /**
@@ -50,5 +51,13 @@ class SchoolClass extends Model
     public function booksetPrices(): HasMany
     {
         return $this->hasMany(BooksetPrice::class);
+    }
+
+    /**
+     * Get the next class for promotion.
+     */
+    public function nextClass(): BelongsTo
+    {
+        return $this->belongsTo(SchoolClass::class, 'next_class_id');
     }
 }

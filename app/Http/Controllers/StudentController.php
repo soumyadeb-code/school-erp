@@ -262,10 +262,33 @@ class StudentController extends Controller
                 ->keyBy('medium');
         }
         
-        // Get students with completed admission (registered status)
-        $registeredStudents = Student::where('school_id', $schoolId)
+        // Get students with completed admission but pending registration (Unregistered tab)
+        $unregisteredStudents = Student::where('school_id', $schoolId)
             ->where('admission_status', 'completed')
             ->where('registration_status', 'pending')
+            ->with('schoolClass')
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        // Calculate next class based on age for each student
+        $unregisteredStudents = $unregisteredStudents->map(function($student) {
+            if ($student->dob) {
+                $studentAge = Carbon::parse($student->dob)->age;
+                // Find the next class based on minimum age
+                $nextClass = SchoolClass::where('school_id', $student->school_id)
+                    ->where('status', 'active')
+                    ->where('minimum_age', '>', $studentAge)
+                    ->orderBy('minimum_age')
+                    ->first();
+                $student->nextClass = $nextClass;
+            }
+            return $student;
+        });
+            
+        // Get students with completed registration (Registered tab)
+        $registeredStudents = Student::where('school_id', $schoolId)
+            ->where('admission_status', 'completed')
+            ->where('registration_status', 'completed')
             ->with('schoolClass')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -275,6 +298,7 @@ class StudentController extends Controller
             'classes',
             'mediums',
             'registrationFees',
+            'unregisteredStudents',
             'registeredStudents'
         ));
     }
@@ -364,6 +388,199 @@ class StudentController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Student added successfully. Please complete the admission billing.');
+    }
+
+    /**
+     * Show registration billing form.
+     */
+    public function registrationBilling(Student $student)
+    {
+        $this->authorizeSchool($student);
+        
+        $schoolId = auth()->user()->school_id;
+        
+        // Get active academic year (the NEW academic year for registration)
+        $academicYear = AcademicYear::where('school_id', $schoolId)
+            ->where('is_active', true)
+            ->first();
+        
+        // If no active academic year, redirect back with error
+        if (!$academicYear) {
+            return redirect()->back()->with('error', 'No active academic year found. Please set up and activate an academic year first.');
+        }
+            
+        // Get registration fee for this student
+        $registrationFee = RegistrationFee::where('school_id', $schoolId)
+            ->where('academic_year_id', $academicYear->id)
+            ->whereRaw('LOWER(medium) = ?', [strtolower($student->medium)])
+            ->first();
+        
+        // If registration fee is not set for this student's medium, redirect to fee not set page
+        if (!$registrationFee) {
+            $medium = $student->medium;
+            return view('students.registration-fee-not-set', compact('student', 'academicYear', 'medium'));
+        }
+            
+        // Get old due from previous academic year
+        $oldDue = StudentDue::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_due');
+            
+        // Get advance
+        $advance = StudentAdvance::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_advance');
+            
+        // Generate receipt number
+        $lastReceipt = Receipt::where('school_id', $schoolId)
+            ->where('bill_type', 'registration')
+            ->orderBy('receipt_no', 'desc')
+            ->first();
+            
+        $receiptNo = $lastReceipt ? $lastReceipt->receipt_no + 1 : 1;
+            
+        return view('students.registration-billing', compact(
+            'student',
+            'academicYear',
+            'registrationFee',
+            'oldDue',
+            'advance',
+            'receiptNo'
+        ));
+    }
+
+    /**
+     * Process registration billing.
+     */
+    public function processRegistrationBilling(Request $request, Student $student)
+    {
+        $this->authorizeSchool($student);
+        
+        $schoolId = auth()->user()->school_id;
+        
+        // Auto-generate receipt number
+        $lastReceipt = Receipt::where('school_id', $schoolId)
+            ->where('bill_type', 'registration')
+            ->orderBy('receipt_no', 'desc')
+            ->first();
+        $receiptNo = $lastReceipt ? $lastReceipt->receipt_no + 1 : 1;
+        
+        $validator = Validator::make($request->all(), [
+            'billing_date' => 'required|date',
+            'discount' => 'nullable|numeric|min:0',
+            'amount_paid' => 'required|numeric|min:0',
+            'payment_mode' => 'required|in:cash,online',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $academicYear = AcademicYear::where('school_id', $schoolId)
+            ->where('is_active', true)
+            ->first();
+
+        // Get registration fee
+        $registrationFee = null;
+        $totalAmount = 0;
+        if ($academicYear) {
+            $registrationFee = RegistrationFee::where('school_id', $schoolId)
+                ->where('academic_year_id', $academicYear->id)
+                ->whereRaw('LOWER(medium) = ?', [strtolower($student->medium)])
+                ->where('status', 'active')
+                ->first();
+            $totalAmount = $registrationFee ? $registrationFee->amount : 0;
+        }
+        
+        $discount = $request->discount ?? 0;
+        $oldDue = StudentDue::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_due');
+        $advance = StudentAdvance::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_advance');
+
+        $finalTotal = $totalAmount + $oldDue - $discount - $advance;
+        $amountPaid = $request->amount_paid;
+
+        // Calculate due/advance
+        $newDue = max(0, $finalTotal - $amountPaid);
+        $newAdvance = max(0, $amountPaid - $finalTotal);
+        
+        $receipt = DB::transaction(function () use ($schoolId, $student, $request, $totalAmount, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $academicYear, $receiptNo, $advance) {
+            // Create receipt
+            $receiptStatus = $newDue > 0 ? 'due' : 'paid';
+            $receipt = Receipt::create([
+                'school_id' => $schoolId,
+                'student_id' => $student->id,
+                'receipt_no' => $receiptNo,
+                'bill_type' => 'registration',
+                'total_amount' => $totalAmount,
+                'discount' => $discount,
+                'less_advance' => $advance,
+                'paid_amount' => $amountPaid,
+                'due_amount' => $newDue,
+                'advance_amount' => $newAdvance,
+                'old_due_paid' => $oldDue,
+                'payment_mode' => $request->payment_mode,
+                'billing_date' => $request->billing_date,
+                'status' => $receiptStatus,
+                'created_by' => auth()->id(),
+            ]);
+
+            // Update old due
+            if ($oldDue > 0) {
+                StudentDue::where('school_id', $schoolId)
+                    ->where('student_id', $student->id)
+                    ->delete();
+            }
+
+            // Update advance
+            $currentAdvance = StudentAdvance::where('school_id', $schoolId)
+                ->where('student_id', $student->id)
+                ->first();
+                
+            if ($currentAdvance) {
+                if ($newAdvance > 0) {
+                    $currentAdvance->update(['total_advance' => $newAdvance]);
+                } else {
+                    $currentAdvance->delete();
+                }
+            } elseif ($newAdvance > 0 && $academicYear) {
+                StudentAdvance::create([
+                    'school_id' => $schoolId,
+                    'student_id' => $student->id,
+                    'academic_year_id' => $academicYear->id,
+                    'total_advance' => $newAdvance,
+                ]);
+            }
+
+            // Create new due if any
+            if ($newDue > 0 && $academicYear) {
+                StudentDue::updateOrCreate(
+                    ['school_id' => $schoolId, 'student_id' => $student->id, 'academic_year_id' => $academicYear->id],
+                    ['total_due' => $newDue]
+                );
+            }
+
+            // Update student registration status to completed
+            $student->update([
+                'registration_status' => 'completed'
+            ]);
+            
+            // Update academic history
+            StudentAcademicHistory::where('student_id', $student->id)
+                ->update(['registration_status' => 'registered']);
+            
+            return $receipt;
+        });
+
+        // Redirect to registration page with success message
+        return redirect()->route('students.registration')
+            ->with('success', 'Registration billing completed successfully.')
+            ->with('receipt_id', $receipt->id);
     }
 
     /**
