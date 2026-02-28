@@ -379,15 +379,22 @@ class StudentController extends Controller
         $academicYear = AcademicYear::where('school_id', $schoolId)
             ->where('is_active', true)
             ->first();
+        
+        // If no active academic year, redirect back with error
+        if (!$academicYear) {
+            return redirect()->back()->with('error', 'No active academic year found. Please set up and activate an academic year first.');
+        }
             
-        // Get admission fee for this student
-        $admissionFee = null;
-        if ($academicYear) {
-            $admissionFee = AdmissionFee::where('school_id', $schoolId)
-                ->where('academic_year_id', $academicYear->id)
-                ->where('medium', $student->medium)
-                ->where('status', 'active')
-                ->first();
+        // Get admission fee for this student - use case-insensitive comparison for medium
+        $admissionFee = AdmissionFee::where('school_id', $schoolId)
+            ->where('academic_year_id', $academicYear->id)
+            ->whereRaw('LOWER(medium) = ?', [strtolower($student->medium)])
+            ->first();
+        
+        // If admission fee is not set for this student's medium, redirect to fee not set page
+        if (!$admissionFee) {
+            $medium = $student->medium;
+            return view('students.admission-fee-not-set', compact('student', 'academicYear', 'medium'));
         }
             
         // Get old due
@@ -405,6 +412,8 @@ class StudentController extends Controller
             ->where('bill_type', 'admission')
             ->orderBy('receipt_no', 'desc')
             ->first();
+
+            // dd($lastReceipt);
             
         $receiptNo = $lastReceipt ? $lastReceipt->receipt_no + 1 : 1;
             
@@ -427,8 +436,14 @@ class StudentController extends Controller
         
         $schoolId = auth()->user()->school_id;
         
+        // Auto-generate receipt number - don't rely on form value
+        $lastReceipt = Receipt::where('school_id', $schoolId)
+            ->where('bill_type', 'admission')
+            ->orderBy('receipt_no', 'desc')
+            ->first();
+        $receiptNo = $lastReceipt ? $lastReceipt->receipt_no + 1 : 1;
+        
         $validator = Validator::make($request->all(), [
-            'receipt_no' => 'required|integer|unique:receipts,receipt_no,NULL,id,school_id,' . $schoolId,
             'billing_date' => 'required|date',
             'discount' => 'nullable|numeric|min:0',
             'amount_paid' => 'required|numeric|min:0',
@@ -472,16 +487,17 @@ class StudentController extends Controller
         $newDue = max(0, $finalTotal - $amountPaid);
         $newAdvance = max(0, $amountPaid - $finalTotal);
         
-        $receipt = DB::transaction(function () use ($schoolId, $student, $request, $totalAmount, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $academicYear) {
+        $receipt = DB::transaction(function () use ($schoolId, $student, $request, $totalAmount, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $academicYear, $receiptNo, $advance) {
             // Create receipt - use 'paid' or 'due' based on payment status
             $receiptStatus = $newDue > 0 ? 'due' : 'paid';
             $receipt = Receipt::create([
                 'school_id' => $schoolId,
                 'student_id' => $student->id,
-                'receipt_no' => $request->receipt_no,
+                'receipt_no' => $receiptNo,
                 'bill_type' => 'admission',
                 'total_amount' => $totalAmount,
                 'discount' => $discount,
+                'less_advance' => $advance,
                 'paid_amount' => $amountPaid,
                 'due_amount' => $newDue,
                 'advance_amount' => $newAdvance,
@@ -1071,7 +1087,7 @@ class StudentController extends Controller
         $newDue = max(0, $finalTotal - $amountPaid);
         $newAdvance = max(0, $amountPaid - $finalTotal);
 
-        DB::transaction(function () use ($schoolId, $student, $request, $academicYear, $tuitionFee, $busFee, $subtotal, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $selectedMonths, $monthCount) {
+        DB::transaction(function () use ($schoolId, $student, $request, $academicYear, $tuitionFee, $busFee, $subtotal, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $selectedMonths, $monthCount, $advance) {
             // Create receipt - use 'paid' or 'due' based on payment status
             $receiptStatus = $newDue > 0 ? 'due' : 'paid';
             $receipt = Receipt::create([
@@ -1081,6 +1097,7 @@ class StudentController extends Controller
                 'bill_type' => 'monthly',
                 'total_amount' => $subtotal,
                 'discount' => $discount,
+                'less_advance' => $advance,
                 'paid_amount' => $amountPaid,
                 'due_amount' => $newDue,
                 'advance_amount' => $newAdvance,
@@ -1231,7 +1248,7 @@ class StudentController extends Controller
 
         $receiptNo = $lastReceipt ? $lastReceipt->receipt_no + 1 : 1;
 
-        DB::transaction(function () use ($schoolId, $student, $request, $academicYear, $tuitionFee, $busFee, $subtotal, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $selectedMonths, $monthCount, $receiptNo) {
+        DB::transaction(function () use ($schoolId, $student, $request, $academicYear, $tuitionFee, $busFee, $subtotal, $discount, $amountPaid, $oldDue, $newDue, $newAdvance, $selectedMonths, $monthCount, $receiptNo, $advance) {
             // Create receipt
             $receiptStatus = $newDue > 0 ? 'due' : 'paid';
             $receipt = Receipt::create([
@@ -1241,6 +1258,7 @@ class StudentController extends Controller
                 'bill_type' => 'monthly',
                 'total_amount' => $subtotal,
                 'discount' => $discount,
+                'less_advance' => $advance,
                 'paid_amount' => $amountPaid,
                 'due_amount' => $newDue,
                 'advance_amount' => $newAdvance,

@@ -24,7 +24,6 @@
             </div>
             <div class="card-body">
                 <div class="receipt-container">
-                    <!-- School Info -->
                     <div class="text-center mb-4">
                         <h4>{{ auth()->user()->school->school_name ?? 'School Name' }}</h4>
                         <p class="text-muted mb-0">{{ auth()->user()->school->address ?? '' }}</p>
@@ -32,7 +31,6 @@
 
                     <hr>
 
-                    <!-- Receipt Details -->
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <p><strong>Receipt No:</strong> {{ $receipt->receipt_no }}</p>
@@ -47,7 +45,6 @@
                         </div>
                     </div>
 
-                    <!-- Fee Details -->
                     <table class="table table-bordered">
                         <thead>
                             <tr class="bg-light">
@@ -68,9 +65,15 @@
                                 <td>Old Due Paid</td>
                                 <td class="text-end">{{ number_format($receipt->old_due_paid, 2) }}</td>
                             </tr>
+                            @if(($receipt->less_advance ?? 0) > 0)
+                            <tr>
+                                <td>Less Advance</td>
+                                <td class="text-end">- {{ number_format($receipt->less_advance, 2) }}</td>
+                            </tr>
+                            @endif
                             <tr class="bg-light">
                                 <th>Total</th>
-                                <th class="text-end">{{ number_format($receipt->total_amount + $receipt->old_due_paid - $receipt->discount, 2) }}</th>
+                                <th class="text-end">{{ number_format($receipt->total_amount + $receipt->old_due_paid - $receipt->discount - ($receipt->less_advance ?? 0), 2) }}</th>
                             </tr>
                             <tr>
                                 <td>Amount Paid</td>
@@ -123,10 +126,7 @@ function printReceipt() {
     window.print();
 }
 
-// Auto print on page load (optional)
 document.addEventListener('DOMContentLoaded', function() {
-    // Uncomment the line below if you want auto-print on page load
-    // setTimeout(function() { window.print(); }, 1000);
 });
 </script>
 @endsection

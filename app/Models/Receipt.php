@@ -17,6 +17,7 @@ class Receipt extends Model
         'bill_type',
         'total_amount',
         'discount',
+        'less_advance',
         'paid_amount',
         'due_amount',
         'advance_amount',
@@ -31,6 +32,7 @@ class Receipt extends Model
     protected $casts = [
         'total_amount' => 'decimal:2',
         'discount' => 'decimal:2',
+        'less_advance' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'due_amount' => 'decimal:2',
         'advance_amount' => 'decimal:2',

@@ -57,6 +57,23 @@
         <div class="stat-card">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
+                    <p class="text-muted mb-1">Admission Completed</p>
+                    <h3 class="mb-0 text-info"><?php echo e(number_format($admissionStudents)); ?></h3>
+                </div>
+                <div class="icon bg-info bg-opacity-10 text-info">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
                     <p class="text-muted mb-1">This Month Collection</p>
                     <h3 class="mb-0">₹<?php echo e(number_format($monthlyCollection, 2)); ?></h3>
                 </div>

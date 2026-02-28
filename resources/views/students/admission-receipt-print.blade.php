@@ -244,7 +244,7 @@ margin-top: 30px;
 
             <div class="table-row">
                 <div class="left">Less Advance</div>
-                <div class="right">{{ number_format($receipt->advance_amount, 0) }}</div>
+                <div class="right">{{ number_format($receipt->less_advance, 0) }}</div>
             </div>
 
             <div class="table-row">
@@ -254,12 +254,12 @@ margin-top: 30px;
 
             <div class="table-row">
                 <div class="left" style="font-weight:bold;">TOTAL</div>
-                <div class="right" style="font-weight:bold;">{{ number_format($receipt->total_amount + $receipt->old_due_paid - $receipt->discount - $receipt->advance_amount, 0) }}</div>
+                <div class="right" style="font-weight:bold;">{{ number_format($receipt->total_amount + $receipt->old_due_paid - $receipt->discount - $receipt->less_advance, 0) }}</div>
             </div>
 
             <div class="table-row">
                 <div class="left">Advance</div>
-                <div class="right">{{ number_format($receipt->advance_amount > 0 ? ($receipt->paid_amount - ($receipt->total_amount + $receipt->old_due_paid - $receipt->discount - $receipt->advance_amount)) : 0, 0) }}</div>
+                <div class="right">{{ number_format($receipt->advance_amount, 0) }}</div>
             </div>
 
             <div class="table-row">
@@ -363,7 +363,7 @@ margin-top: 30px;
 
             <div class="table-row">
                 <div class="left">Less Advance</div>
-                <div class="right">{{ number_format($receipt->advance_amount, 0) }}</div>
+                <div class="right">{{ number_format($receipt->less_advance, 0) }}</div>
             </div>
 
             <div class="table-row">
@@ -373,12 +373,12 @@ margin-top: 30px;
 
             <div class="table-row">
                 <div class="left" style="font-weight:bold;">TOTAL</div>
-                <div class="right" style="font-weight:bold;">{{ number_format($receipt->total_amount + $receipt->old_due_paid - $receipt->discount - $receipt->advance_amount, 0) }}</div>
+                <div class="right" style="font-weight:bold;">{{ number_format($receipt->total_amount + $receipt->old_due_paid - $receipt->discount - $receipt->less_advance, 0) }}</div>
             </div>
 
             <div class="table-row">
                 <div class="left">Advance</div>
-                <div class="right">{{ number_format($receipt->advance_amount > 0 ? ($receipt->paid_amount - ($receipt->total_amount + $receipt->old_due_paid - $receipt->discount - $receipt->advance_amount)) : 0, 0) }}</div>
+                <div class="right">{{ number_format($receipt->advance_amount, 0) }}</div>
             </div>
 
             <div class="table-row">

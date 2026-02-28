@@ -5,9 +5,9 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SchoolAdminController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\MaintenanceController;
-use App\Http\Controllers\BillLayoutController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\BillLayoutController;
 
 // Public routes
 Route::get('/', function () {
@@ -140,7 +140,7 @@ Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->na
 Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->name('fees.discount');
         Route::post('/fees/discount', [SchoolAdminController::class, 'storeDiscountRule'])->name('fees.discount.store');
 
-// Bill Layouts
+        // Bill Layouts
         Route::get('/bill-layouts/designer', [BillLayoutController::class, 'designer'])->name('bill-layouts.designer');
         Route::post('/bill-layouts', [BillLayoutController::class, 'store'])->name('bill-layouts.store');
         Route::post('/bill-layouts/upload', [BillLayoutController::class, 'upload'])->name('bill-layouts.upload');

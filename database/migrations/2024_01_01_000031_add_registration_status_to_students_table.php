@@ -11,10 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('bill_layouts', function (Blueprint $table) {
-            if (!Schema::hasColumn('bill_layouts', 'is_active')) {
-                $table->boolean('is_active')->default(true)->after('font_size');
-            }
+        Schema::table('students', function (Blueprint $table) {
+            $table->string('registration_status')->default('pending')->after('admission_status');
         });
     }
 
@@ -23,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('bill_layouts', function (Blueprint $table) {
-            $table->dropColumn('is_active');
+        Schema::table('students', function (Blueprint $table) {
+            $table->dropColumn('registration_status');
         });
     }
 };

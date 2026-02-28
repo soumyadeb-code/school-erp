@@ -49,6 +49,8 @@ class Student extends Model
         'bus_destination_id',
         'photo',
         'status',
+        'admission_status',
+        'registration_status',
     ];
 
     protected $casts = [

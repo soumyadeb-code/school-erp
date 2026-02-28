@@ -57,7 +57,7 @@
                                     </td>
                                     <td>
                                         @if($student->registration_status === 'pending')
-                                        <a href="{{ route('students.registration-billing', $student->id) }}" class="btn btn-sm btn-success">
+                                        <a href="{{ route('students.billing', $student->id) }}" class="btn btn-sm btn-success">
                                             <i class="fas fa-file-invoice"></i> Generate Bill
                                         </a>
                                         @else
