@@ -26,105 +26,65 @@ class StudentController extends Controller
     // ==================== STUDENTS LIST (AJAX) ====================
     
     /**
-     * Display all students (for DataTables AJAX).
+     * Display all students (simple list).
      */
     public function index(Request $request)
     {
         $user = auth()->user();
         
-        // Super admin can see all students, school admins see only their school's students
-        $query = Student::with('schoolClass');
+        // Get all students with relationships
+        $query = Student::with('schoolClass', 'busDestination');
         
         if ($user->role !== 'super_admin') {
             $query->where('school_id', $user->school_id);
         }
         
-        // Search filter - handle both DataTables format and simple string
-        $search = $request->search;
-        if (is_array($search) && isset($search['value'])) {
-            $search = $search['value'];
-        }
-        
-        if ($search) {
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('student_id', 'like', '%' . $search . '%');
+                  ->orWhere('student_id', 'like', '%' . $search . '%')
+                  ->orWhere('father_name', 'like', '%' . $search . '%');
             });
         }
         
-        // Custom filters
+        // Class filter
         if ($request->filled('class_id')) {
             $query->where('class_id', $request->class_id);
         }
         
+        // Gender filter
         if ($request->filled('gender')) {
             $query->where('gender', $request->gender);
         }
         
+        // Medium filter
         if ($request->filled('medium')) {
             $query->where('medium', $request->medium);
         }
         
+        // Status filter
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
         
-        // Get total count before filtering (respect role-based access)
-        if ($user->role === 'super_admin') {
-            $totalRecords = Student::count();
-        } else {
-            $totalRecords = Student::where('school_id', $user->school_id)->count();
-        }
-        
-        // Get filtered count
-        $filteredRecords = $query->count();
-        
-        // Sorting - with null checks for safety
-        $orderColumn = 'created_at';
-        $orderDir = 'desc';
-        
-        if ($request->has('order') && is_array($request->order) && count($request->order) > 0) {
-            $orderColIndex = $request->order[0]['column'] ?? 0;
-            $orderDir = $request->order[0]['dir'] ?? 'desc';
-            
-            if ($request->has('columns') && is_array($request->columns) && isset($request->columns[$orderColIndex])) {
-                $orderColumn = $request->columns[$orderColIndex]['name'] ?? 'created_at';
+        // Bus filter
+        if ($request->filled('bus')) {
+            if ($request->bus === 'yes') {
+                $query->whereNotNull('bus_destination_id');
+            } elseif ($request->bus === 'no') {
+                $query->whereNull('bus_destination_id');
             }
         }
         
-        // Pagination
-        $start = $request->start ?? 0;
-        $length = $request->length ?? 10;
+        // Get students ordered by created_at
+        $students = $query->orderBy('created_at', 'desc')->get();
         
-        $students = $query->orderBy($orderColumn, $orderDir)
-            ->offset($start)
-            ->limit($length)
-            ->get();
+        // Get classes for filter dropdown
+        $classes = SchoolClass::where('school_id', $user->school_id)->orderBy('class_name')->get();
         
-        // Format data for DataTables
-        $data = [];
-        foreach ($students as $student) {
-            $data[] = [
-                'student_id' => $student->student_id,
-                'photo' => $student->photo ? '<img src="' . asset('storage/' . $student->photo) . '" width="40" height="40" class="rounded-circle">' : '<div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;">' . substr($student->name, 0, 1) . '</div>',
-                'name' => $student->name,
-                'class_name' => $student->schoolClass ? $student->schoolClass->class_name : '-',
-                'roll' => $student->roll ?? '-',
-                'gender' => ucfirst($student->gender),
-                'dob' => $student->dob ? Carbon::parse($student->dob)->format('d-m-Y') : '-',
-                'medium' => $student->medium,
-                'status' => '<span class="badge bg-' . ($student->status == 'active' ? 'success' : 'secondary') . '">' . ucfirst($student->status) . '</span>',
-                'actions' => '<a href="' . route('students.show', $student->id) . '" class="btn btn-sm btn-info" title="View"><i class="fas fa-eye"></i></a>
-                             <a href="' . route('students.edit', $student->id) . '" class="btn btn-sm btn-warning" title="Edit"><i class="fas fa-edit"></i></a>'
-            ];
-        }
-        
-        return response()->json([
-            'draw' => intval($request->draw),
-            'recordsTotal' => $totalRecords,
-            'recordsFiltered' => $filteredRecords,
-            'data' => $data
-        ]);
+        return view('students.index', compact('students', 'classes'));
     }
 
     /**
@@ -188,7 +148,7 @@ class StudentController extends Controller
 
     // ==================== ADMISSION ====================
     
-    /**
+/**
      * Show admission form.
      */
     public function admission()
@@ -234,6 +194,48 @@ class StudentController extends Controller
     }
 
     /**
+     * Get eligible classes based on student's age (AJAX).
+     * Returns classes where student's age is >= minimum age requirement.
+     */
+    public function getEligibleClasses(Request $request)
+    {
+        $schoolId = auth()->user()->school_id;
+        
+        $dob = $request->input('dob');
+        
+        if (!$dob) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Date of birth is required'
+            ], 400);
+        }
+        
+        try {
+            // Calculate age from DOB
+            $studentAge = Carbon::parse($dob)->age;
+            
+            // Get classes where minimum_age <= student_age
+            $classes = SchoolClass::where('school_id', $schoolId)
+                ->where('status', 'active')
+                ->where('minimum_age', '<=', $studentAge)
+                ->orderBy('minimum_age')
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'student_age' => $studentAge,
+                'classes' => $classes
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid date format'
+            ], 400);
+        }
+    }
+
+    /**
      * Show registration form.
      */
     public function registration()
@@ -273,14 +275,14 @@ class StudentController extends Controller
         // Calculate next class based on age for each student
         $unregisteredStudents = $unregisteredStudents->map(function($student) {
             if ($student->dob) {
-                $studentAge = Carbon::parse($student->dob)->age;
+                 $studentAge = Carbon::parse($student->dob)->age;
                 // Find the next class based on minimum age
                 $nextClass = SchoolClass::where('school_id', $student->school_id)
                     ->where('status', 'active')
                     ->where('minimum_age', '>', $studentAge)
                     ->orderBy('minimum_age')
                     ->first();
-                $student->nextClass = $nextClass;
+                 $student->nextClass = $nextClass;
             }
             return $student;
         });
@@ -829,6 +831,18 @@ class StudentController extends Controller
     {
         $this->authorizeSchool($student);
         $student->load('schoolClass');
+        
+        // Calculate next class based on student's age and minimum age of classes
+        if ($student->dob) {
+            $studentAge = Carbon::parse($student->dob)->age;
+            // Find the next class based on minimum age
+            $nextClass = SchoolClass::where('school_id', $student->school_id)
+                ->where('status', 'active')
+                ->where('minimum_age', '>', $studentAge)
+                ->orderBy('minimum_age')
+                ->first();
+            $student->nextClass = $nextClass;
+        }
         
         return view('students.show', compact('student'));
     }
@@ -1767,6 +1781,138 @@ class StudentController extends Controller
                 'totalDue' => $totalDue,
             ]
         ]);
+    }
+
+    /**
+     * Show individual student's complete bill history.
+     * Includes admission bills, registration bills, monthly bills, due, advance.
+     * Left side: Monthly payment table (Jan-Dec)
+     * Right side: Student details, fees summary, pay button
+     */
+    public function studentBillHistory(Student $student)
+    {
+        $this->authorizeSchool($student);
+        
+        $schoolId = auth()->user()->school_id;
+        
+        // Get current academic year
+        $academicYear = AcademicYear::where('school_id', $schoolId)
+            ->where('is_active', true)
+            ->first();
+        
+        // Get all academic years for the student
+        $academicYears = AcademicYear::where('school_id', $schoolId)
+            ->orderBy('year', 'desc')
+            ->get();
+        
+        // Get selected year (default to current)
+        $selectedYearId = request('year', $academicYear ? $academicYear->id : null);
+        $selectedYear = $academicYears->firstWhere('id', $selectedYearId);
+        
+        // Get student with relationships
+        $student->load('schoolClass', 'busDestination');
+        
+        // Get class fee (tuition fee) for the student
+        $tuitionFee = 0;
+        if ($selectedYear && $student->class_id && $student->medium) {
+            $classFee = ClassFee::where('school_id', $schoolId)
+                ->where('academic_year_id', $selectedYearId)
+                ->where('class_id', $student->class_id)
+                ->where('medium', $student->medium)
+                ->first();
+            $tuitionFee = $classFee ? $classFee->tuition_fee : 0;
+        }
+        
+        // Get bus fee for the student
+        $busFee = 0;
+        if ($student->bus_destination_id) {
+            $busFeeRecord = BusFee::where('school_id', $schoolId)
+                ->where('id', $student->bus_destination_id)
+                ->first();
+            $busFee = $busFeeRecord ? $busFeeRecord->fee : 0;
+        }
+        
+        // Get all receipts for the student (all types: admission, registration, monthly)
+        $receipts = Receipt::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->orderBy('billing_date', 'desc')
+            ->get();
+        
+        // Get admission receipts
+        $admissionReceipts = $receipts->where('bill_type', 'admission');
+        
+        // Get registration receipts
+        $registrationReceipts = $receipts->where('bill_type', 'registration');
+        
+        // Get monthly receipts
+        $monthlyReceipts = $receipts->where('bill_type', 'monthly');
+        
+        // Get old due
+        $totalOldDue = StudentDue::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_due');
+        
+        // Get advance
+        $totalAdvance = StudentAdvance::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->sum('total_advance');
+        
+        // Get monthly payments for selected year (for Jan-Dec table)
+        $monthlyPayments = [];
+        if ($selectedYearId) {
+            $payments = MonthlyPayment::where('school_id', $schoolId)
+                ->where('student_id', $student->id)
+                ->where('academic_year_id', $selectedYearId)
+                ->orderBy('month')
+                ->get();
+            
+            foreach ($payments as $payment) {
+                $monthlyPayments[$payment->month] = $payment;
+            }
+        }
+        
+        // Get current due for selected year
+        $currentDue = 0;
+        if ($selectedYearId) {
+            $currentDue = StudentDue::where('school_id', $schoolId)
+                ->where('student_id', $student->id)
+                ->where('academic_year_id', $selectedYearId)
+                ->sum('total_due');
+        }
+        
+        // Get current advance for selected year
+        $currentAdvance = 0;
+        if ($selectedYearId) {
+            $currentAdvance = StudentAdvance::where('school_id', $schoolId)
+                ->where('student_id', $student->id)
+                ->where('academic_year_id', $selectedYearId)
+                ->sum('total_advance');
+        }
+        
+        // Calculate totals
+        $totalAdmissionPaid = $admissionReceipts->sum('paid_amount');
+        $totalRegistrationPaid = $registrationReceipts->sum('paid_amount');
+        $totalMonthlyPaid = $monthlyReceipts->sum('paid_amount');
+        
+        return view('students.student-bill-history', compact(
+            'student',
+            'academicYears',
+            'selectedYear',
+            'tuitionFee',
+            'busFee',
+            'receipts',
+            'admissionReceipts',
+            'registrationReceipts',
+            'monthlyReceipts',
+            'monthlyPayments',
+            'totalOldDue',
+            'totalAdvance',
+            'currentDue',
+            'currentAdvance',
+            'totalAdmissionPaid',
+            'totalRegistrationPaid',
+            'totalMonthlyPaid'
+        ));
     }
 
     /**

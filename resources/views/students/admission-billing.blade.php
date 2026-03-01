@@ -40,6 +40,11 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label">Medium:</label>
+                        <input type="text" class="form-control" id="studentMedium" value="{{ ucfirst($student->medium) }}" readonly>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label">Less Advance:</label>
                         <input type="text" class="form-control" id="lessAdvance" value="{{ $advance }}" readonly>
                     </div>
@@ -91,8 +96,14 @@
                     <!-- Amount Paid - Radio Options -->
                     <div class="mb-3">
                         <label class="form-label">Amount Paid:</label><br>
-                        <input type="radio" name="paymentOption" value="total" checked> Total
-                        <input type="radio" name="paymentOption" value="custom" class="ms-3"> Custom
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="paymentOption" id="paymentTotal" value="total" checked>
+                            <label class="form-check-label" for="paymentTotal">Total</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="paymentOption" id="paymentCustom" value="custom">
+                            <label class="form-check-label" for="paymentCustom">Custom</label>
+                        </div>
                         <input type="number" class="form-control mt-2" name="amount_paid" id="amountPaid" required>
                     </div>
 
@@ -127,7 +138,11 @@ document.addEventListener("DOMContentLoaded", function() {
     var newDueInput = document.getElementById('newDue');
     var duePaidInput = document.getElementById('duePaid');
     var advanceInput = document.getElementById('advance');
-    var paymentOptions = document.getElementsByName('paymentOption');
+    var paymentTotal = document.getElementById('paymentTotal');
+    var paymentCustom = document.getElementById('paymentCustom');
+    
+    // Set initial amount paid as readonly (Total selected by default)
+    amountPaidInput.readOnly = true;
     
     // Calculate total
     function calculateTotal() {
@@ -178,7 +193,11 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Discount change
     discountInput.addEventListener('input', function() {
-        calculateTotal();
+        var total = calculateTotal();
+        // Update amount paid if Total is selected
+        if (paymentTotal.checked) {
+            amountPaidInput.value = total.toFixed(2);
+        }
         calculateDueAdvance();
     });
     
@@ -187,18 +206,24 @@ document.addEventListener("DOMContentLoaded", function() {
         calculateDueAdvance();
     });
     
-    // Payment option change
-    for (var i = 0; i < paymentOptions.length; i++) {
-        paymentOptions[i].addEventListener('change', function() {
-            if (this.value === 'total') {
-                amountPaidInput.value = totalAmountInput.value;
-            } else {
-                amountPaidInput.value = '';
-                amountPaidInput.focus();
-            }
-            calculateDueAdvance();
-        });
-    }
+    // Payment option change - Total
+    paymentTotal.addEventListener('change', function() {
+        if (this.checked) {
+            amountPaidInput.value = totalAmountInput.value;
+            amountPaidInput.readOnly = true;
+        }
+        calculateDueAdvance();
+    });
+    
+    // Payment option change - Custom
+    paymentCustom.addEventListener('change', function() {
+        if (this.checked) {
+            amountPaidInput.value = '';
+            amountPaidInput.readOnly = false;
+            amountPaidInput.focus();
+        }
+        calculateDueAdvance();
+    });
 });
 </script>
 @endsection

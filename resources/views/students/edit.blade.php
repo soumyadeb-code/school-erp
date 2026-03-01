@@ -79,8 +79,8 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="roll" class="form-label">Roll Number</label>
-                        <input type="number" class="form-control" id="roll" name="roll"roll', $student->roll) }}">
- value="{{ old('                    </div>
+                        <input type="number" class="form-control" id="roll" name="roll" value="{{ old('roll', $student->roll) }}">
+                    </div>
                 </div>
             </div>
             
@@ -118,9 +118,48 @@
                         <input type="text" class="form-control" id="mother_name" name="mother_name" value="{{ old('mother_name', $student->mother_name) }}">
                     </div>
                 </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="mother_education" class="form-label">Mother's Education</label>
+                        <input type="text" class="form-control" id="mother_education" name="mother_education" value="{{ old('mother_education', $student->mother_education) }}">
+                    </div>
+                </div>
             </div>
             
             <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="father_education" class="form-label">Father's Education</label>
+                        <input type="text" class="form-control" id="father_education" name="father_education" value="{{ old('father_education', $student->father_education) }}">
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="yearly_income" class="form-label">Yearly Income</label>
+                        <input type="number" class="form-control" id="yearly_income" name="yearly_income" value="{{ old('yearly_income', $student->yearly_income) }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="religion" class="form-label">Religion</label>
+                        <select class="form-select" id="religion" name="religion">
+                            <option value="">Select</option>
+                            <option value="Hindu" {{ old('religion', $student->religion) == 'Hindu' ? 'selected' : '' }}>Hindu</option>
+                            <option value="Muslim" {{ old('religion', $student->religion) == 'Muslim' ? 'selected' : '' }}>Muslim</option>
+                            <option value="Christian" {{ old('religion', $student->religion) == 'Christian' ? 'selected' : '' }}>Christian</option>
+                            <option value="Sikh" {{ old('religion', $student->religion) == 'Sikh' ? 'selected' : '' }}>Sikh</option>
+                            <option value="Buddhist" {{ old('religion', $student->religion) == 'Buddhist' ? 'selected' : '' }}>Buddhist</option>
+                            <option value="Jain" {{ old('religion', $student->religion) == 'Jain' ? 'selected' : '' }}>Jain</option>
+                            <option value="Other" {{ old('religion', $student->religion) == 'Other' ? 'selected' : '' }}>Other</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="phone" class="form-label">Phone Number</label>

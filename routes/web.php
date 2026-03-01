@@ -140,6 +140,7 @@ Route::get('/fees/bookset', [SchoolAdminController::class, 'booksetPrices'])->na
 Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->name('fees.discount');
         Route::post('/fees/discount', [SchoolAdminController::class, 'storeDiscountRule'])->name('fees.discount.store');
 
+        
         // Bill Layouts
         Route::get('/bill-layouts/designer', [BillLayoutController::class, 'designer'])->name('bill-layouts.designer');
         Route::post('/bill-layouts', [BillLayoutController::class, 'store'])->name('bill-layouts.store');
@@ -158,13 +159,7 @@ Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->n
     // Student Management Routes
     Route::prefix('students')->name('students.')->group(function () {
         // Student list page (renders the view)
-        Route::get('/list', function() {
-            $classes = \App\Models\SchoolClass::where('school_id', auth()->user()->school_id)
-                ->where('status', 'active')
-                ->orderBy('minimum_age')
-                ->get();
-            return view('students.index', compact('classes'));
-        })->name('list');
+        Route::get('/list', [StudentController::class, 'index'])->name('list');
         
         // Student search (AJAX)
         Route::get('/search', [StudentController::class, 'search'])->name('search');
@@ -180,9 +175,15 @@ Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->n
         Route::get('/bill-history', [StudentController::class, 'billHistory'])->name('bill-history');
         Route::get('/bill-history/ajax', [StudentController::class, 'billHistoryAjax'])->name('bill-history.ajax');
         
-        // Admission
+        // Student Bill History - individual student's complete bill history
+        Route::get('/{student}/bill-history', [StudentController::class, 'studentBillHistory'])->name('student-bill-history');
+        
+// Admission
         Route::get('/admission', [StudentController::class, 'admission'])->name('admission');
         Route::post('/admission', [StudentController::class, 'storeStudent'])->name('admission.store');
+        
+        // Get eligible classes based on age (AJAX)
+        Route::get('/eligible-classes', [StudentController::class, 'getEligibleClasses'])->name('eligible-classes');
         
         // Generate Admission PDF Data (API endpoint)
         Route::post('/generate-admission-data', [StudentController::class, 'generateAdmissionData'])->name('generate-admission-data');

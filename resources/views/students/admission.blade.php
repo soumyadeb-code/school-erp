@@ -28,18 +28,20 @@
                     <div class="mb-3">
                         <label class="form-label">Date of Birth <span class="text-danger">*</span></label>
                         <input type="date" class="form-control" name="dob" id="dob" required>
+                        <div class="form-text text-info" id="age-display"></div>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Class <span class="text-danger">*</span></label>
                         <select class="form-select" name="class_id" id="class_id" required>
-                            <option value="">Select Class</option>
+                            <option value="">Select Date of Birth first</option>
                             @foreach($classes as $class)
                             <option value="{{ $class->id }}" data-min-age="{{ $class->minimum_age }}">
                                 {{ $class->class_name }} (Min Age: {{ $class->minimum_age }}+)
                             </option>
                             @endforeach
                         </select>
+                        <div class="form-text text-muted" id="class-hint">Enter Date of Birth to see eligible classes</div>
                     </div>
                     
                     <div class="mb-3">
@@ -175,29 +177,99 @@
 
 @section('scripts')
 <script>
-function handleDelete(button) {
-    // Get the form
-    const form = button.closest('form');
-    const modal = button.closest('.modal');
+// Store all classes data for filtering
+const allClasses = @json($classes);
+
+document.addEventListener('DOMContentLoaded', function() {
+    const dobInput = document.getElementById('dob');
+    const classSelect = document.getElementById('class_id');
+    const ageDisplay = document.getElementById('age-display');
+    const classHint = document.getElementById('class-hint');
     
-    // Hide the modal immediately
-    const modalInstance = bootstrap.Modal.getInstance(modal);
-    if (modalInstance) {
-        modalInstance.hide();
+    // Listen for DOB changes
+    dobInput.addEventListener('change', function() {
+        const dob = this.value;
+        
+        if (!dob) {
+            // Reset class dropdown if DOB is cleared
+            resetClassDropdown('Enter Date of Birth to see eligible classes');
+            ageDisplay.textContent = '';
+            return;
+        }
+        
+        // Calculate age
+        const birthDate = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
+        // Display age
+        ageDisplay.textContent = `Student Age: ${age} years`;
+        
+        // Fetch eligible classes via AJAX
+        fetchEligibleClasses(dob);
+    });
+    
+    function fetchEligibleClasses(dob) {
+        const url = '{{ route("students.eligible-classes") }}?dob=' + dob;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateClassDropdown(data.classes, data.student_age);
+                } else {
+                    console.error('Error:', data.message);
+                    resetClassDropdown('Error loading classes. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resetClassDropdown('Error loading classes. Please try again.');
+            });
     }
     
-    // Remove modal backdrop
-    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    document.body.classList.remove('modal-open');
+    function updateClassDropdown(classes, studentAge) {
+        classSelect.innerHTML = '';
+        
+        if (classes.length === 0) {
+            classSelect.innerHTML = '<option value="">No eligible classes found for age ' + studentAge + '</option>';
+            classHint.textContent = 'No classes available for this age group';
+            classHint.className = 'form-text text-danger';
+            return;
+        }
+        
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select Class';
+        classSelect.appendChild(defaultOption);
+        
+        // Add eligible classes
+        classes.forEach(classItem => {
+            const option = document.createElement('option');
+            option.value = classItem.id;
+            option.textContent = classItem.class_name + ' (Min Age: ' + classItem.minimum_age + '+)';
+            option.dataset.minAge = classItem.minimum_age;
+            classSelect.appendChild(option);
+        });
+        
+        classHint.textContent = 'Showing ' + classes.length + ' eligible class(es) for age ' + studentAge;
+        classHint.className = 'form-text text-success';
+    }
     
-    // Submit the form normally
-    form.submit();
-}
-
-// Check for receipt_id in session and open in new tab
-document.addEventListener('DOMContentLoaded', function() {
+    function resetClassDropdown(message) {
+        classSelect.innerHTML = '<option value="">' + message + '</option>';
+        classHint.textContent = message;
+        classHint.className = 'form-text text-muted';
+    }
+    
+    // Check for receipt_id in session and open in new tab
     @if(session('receipt_id'))
-    // Open the receipt in a new tab
     const receiptUrl = '{{ route("students.receipt-view", session("receipt_id")) }}';
     const link = document.createElement('a');
     link.href = receiptUrl;

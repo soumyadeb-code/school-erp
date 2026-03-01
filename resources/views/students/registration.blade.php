@@ -281,6 +281,10 @@
                 </thead>
                 <tbody>
                     @foreach($unregisteredStudents as $student)
+                    {{-- @php
+                        print_r($student);
+                    @endphp --}}
+                    
                     <tr>
                         <td>
                             <a href="#" class="student-id-link">{{ $student->student_id }}</a>

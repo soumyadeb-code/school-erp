@@ -19,213 +19,148 @@
             <div class="col-md-6 text-end">
                 <span class="badge bg-primary fs-6">
                     <i class="fas fa-users me-1"></i>
-                    Total Records: <span id="totalRecords">0</span>
+                    Total Records: {{ $students->count() }}
                 </span>
             </div>
         </div>
-        <div class="row g-2 align-items-end">
+        
+        <form method="GET" action="{{ route('students.index') }}" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Search</label>
-                <input type="text" id="searchInput" class="form-control" placeholder="Search name, ID, phone, father name...">
+                <input type="text" name="search" class="form-control" placeholder="Search name, ID, father name..." value="{{ request('search') }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label">Class</label>
-                <select class="form-select" id="classFilter">
+                <select name="class_id" class="form-select">
                     <option value="">All Classes</option>
                     @foreach($classes as $class)
-                        <option value="{{ $class->id }}">{{ $class->class_name }}</option>
+                        <option value="{{ $class->id }}" {{ request('class_id') == $class->id ? 'selected' : '' }}>{{ $class->class_name }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Gender</label>
-                <select class="form-select" id="genderFilter">
+                <select name="gender" class="form-select">
                     <option value="">All Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
+                    <option value="male" {{ request('gender') == 'male' ? 'selected' : '' }}>Male</option>
+                    <option value="female" {{ request('gender') == 'female' ? 'selected' : '' }}>Female</option>
                 </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Medium</label>
-                <select class="form-select" id="mediumFilter">
+                <select name="medium" class="form-select">
                     <option value="">All Medium</option>
-                    <option value="Bengali">Bengali</option>
-                    <option value="English">English</option>
-                    <option value="Hindi">Hindi</option>
+                    <option value="Bengali" {{ request('medium') == 'Bengali' ? 'selected' : '' }}>Bengali</option>
+                    <option value="English" {{ request('medium') == 'English' ? 'selected' : '' }}>English</option>
+                    <option value="Hindi" {{ request('medium') == 'Hindi' ? 'selected' : '' }}>Hindi</option>
                 </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Status</label>
-                <select class="form-select" id="statusFilter">
+                <select name="status" class="form-select">
                     <option value="">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="pending">Pending</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
+                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
                 </select>
             </div>
-            <div class="col-md-1">
-                <label class="form-label">&nbsp;</label>
-                <button id="clearBtn" class="btn btn-secondary w-100" title="Clear filters">
-                    <i class="fas fa-times"></i>
+            <div class="col-md-2">
+                <label class="form-label">Bus Route</label>
+                <select name="bus" class="form-select">
+                    <option value="">All Bus Routes</option>
+                    <option value="yes" {{ request('bus') == 'yes' ? 'selected' : '' }}>With Bus</option>
+                    <option value="no" {{ request('bus') == 'no' ? 'selected' : '' }}>Without Bus</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-1"></i> Filter
                 </button>
             </div>
-        </div>
-        <div class="row g-2 mt-2">
-            <div class="col-md-2">
-                <label class="form-label">Show per page</label>
-                <select class="form-select" id="perPage">
-                    <option value="10">10 per page</option>
-                    <option value="20">20 per page</option>
-                    <option value="50">50 per page</option>
-                    <option value="100">100 per page</option>
-                </select>
-            </div>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table id="studentsTable" class="table table-bordered table-striped">
-                <thead>
-                    <tr>
-                        <th width="50">S.No.</th>
-                        <th>Student ID</th>
-                        <th>Photo</th>
-                        <th>Name</th>
-                        <th>Class</th>
-                        <th>Roll</th>
-                        <th>Gender</th>
-                        <th>DOB</th>
-                        <th>Medium</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
-            <!-- Empty state message -->
-            <div id="emptyState" class="text-center py-5 d-none">
-                <div class="mb-3">
-                    <i class="fas fa-user-graduate fa-4x text-muted"></i>
-                </div>
-                <h5 class="text-muted">No Students Found</h5>
-                <p class="text-muted">There are no students in this school yet.</p>
-                <a href="{{ route('students.admission') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i> Add First Student
+            <div class="col-md-1">
+                <a href="{{ route('students.index') }}" class="btn btn-secondary w-100" title="Clear filters">
+                    <i class="fas fa-times"></i>
                 </a>
             </div>
+        </form>
+    </div>
+    
+    <div class="card-body">
+        <div class="table-responsive">
+            @if($students->count() > 0)
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th width="50">S.No.</th>
+                            <th>Student ID</th>
+                            <th>Photo</th>
+                            <th>Name</th>
+                            <th>Class</th>
+                            <th>Roll</th>
+                            <th>Gender</th>
+                            <th>DOB</th>
+                            <th>Medium</th>
+                            <th>Bus Destination</th>
+                            <th>Bus Fee</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($students as $index => $student)
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td>{{ $student->student_id }}</td>
+                            <td>
+                                @if($student->photo)
+                                    <img src="{{ asset('storage/' . $student->photo) }}" width="40" height="40" class="rounded-circle">
+                                @else
+                                    <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                                        {{ substr($student->name, 0, 1) }}
+                                    </div>
+                                @endif
+                            </td>
+                            <td>{{ $student->name }}</td>
+                            <td>{{ $student->schoolClass ? $student->schoolClass->class_name : '-' }}</td>
+                            <td>{{ $student->roll ?? '-' }}</td>
+                            <td>{{ ucfirst($student->gender) }}</td>
+                            <td>{{ $student->dob ? \Carbon\Carbon::parse($student->dob)->format('d-m-Y') : '-' }}</td>
+                            <td>{{ $student->medium }}</td>
+                            <td>{{ $student->busDestination ? $student->busDestination->destination : '-' }}</td>
+                            <td>{{ $student->busDestination ? '₹' . number_format($student->busDestination->price, 2) : '-' }}</td>
+                            <td>
+                                <span class="badge bg-{{ $student->status == 'active' ? 'success' : 'secondary' }}">
+                                    {{ ucfirst($student->status) }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ route('students.show', $student->id) }}" class="btn btn-sm btn-info" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ route('students.student-bill-history', $student->id) }}" class="btn btn-sm btn-primary" title="Bill History">
+                                    <i class="fas fa-file-invoice"></i>
+                                </a>
+                                <a href="{{ route('students.edit', $student->id) }}" class="btn btn-sm btn-warning" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @else
+                <div class="text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-user-graduate fa-4x text-muted"></i>
+                    </div>
+                    <h5 class="text-muted">No Students Found</h5>
+                    <p class="text-muted">There are no students in this school yet.</p>
+                    <a href="{{ route('students.admission') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> Add First Student
+                    </a>
+                </div>
+            @endif
         </div>
     </div>
 </div>
 @endsection
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    if ($('#studentsTable').length) {
-        var table = $('#studentsTable').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: {
-                url: '{{ route('students.index') }}',
-                type: 'GET',
-                data: function(d) {
-                    // Custom search from our input field
-                    d.search = $('#searchInput').val();
-                    // Custom filters
-                    d.gender = $('#genderFilter').val();
-                    d.class_id = $('#classFilter').val();
-                    d.medium = $('#mediumFilter').val();
-                    d.status = $('#statusFilter').val();
-                }
-            columns: [
-                { 
-                    data: null, 
-                    name: 'sno', 
-                    orderable: false, 
-                    searchable: false,
-                    render: function(data, type, row, meta) {
-                        return meta.row + meta.settings._iDisplayStart + 1;
-                    }
-                },
-                { data: 'student_id', name: 'student_id' },
-                { data: 'photo', name: 'photo', orderable: false, searchable: false },
-                { data: 'name', name: 'name' },
-                { data: 'class_name', name: 'class_name' },
-                { data: 'roll', name: 'roll' },
-                { data: 'gender', name: 'gender' },
-                { data: 'dob', name: 'dob' },
-                { data: 'medium', name: 'medium' },
-                { data: 'status', name: 'status' },
-                { data: 'actions', name: 'actions', orderable: false, searchable: false }
-            ],
-            pageLength: 10,
-            lengthMenu: [[10, 20, 50, 100], [10, 20, 50, 100]],
-            language: {
-                search: "_INPUT_",
-                searchPlaceholder: "Search by name or ID...",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                infoEmpty: "Showing 0 to 0 of 0 entries",
-                infoFiltered: "(filtered from _MAX_ total entries)",
-                paginate: {
-                    first: "First",
-                    last: "Last",
-                    next: "Next",
-                    previous: "Previous"
-                },
-                processing: '<i class="fa fa-spinner fa-spin fa-fw"></i> Loading...'
-            },
-            columnDefs: [
-                { orderable: false, targets: [0, 2, 10] }
-            ],
-            drawCallback: function(settings) {
-                // Update total records badge
-                var info = table.page.info();
-                $('#totalRecords').text(info.recordsTotal);
-                
-                // Show/hide empty state
-                if (info.recordsTotal === 0) {
-                    $('#emptyState').removeClass('d-none');
-                    $('#studentsTable').addClass('d-none');
-                } else {
-                    $('#emptyState').addClass('d-none');
-                    $('#studentsTable').removeClass('d-none');
-                }
-            }
-        });
-
-        // Real-time search with debounce (300ms)
-        var searchTimeout;
-        $('#searchInput').on('keyup', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(function() {
-                table.draw();
-            }, 300);
-        });
-
-        // Auto-trigger on dropdown changes for real-time filtering
-        $('#classFilter, #genderFilter, #mediumFilter, #statusFilter').on('change', function() {
-            table.draw();
-        });
-
-        // Per-page dropdown change
-        $('#perPage').on('change', function() {
-            var perPage = $(this).val();
-            table.page.len(perPage).draw();
-        });
-
-        // Clear filters button
-        $('#clearBtn').on('click', function() {
-            $('#searchInput').val('');
-            $('#classFilter').val('');
-            $('#genderFilter').val('');
-            $('#mediumFilter').val('');
-            $('#statusFilter').val('');
-            $('#perPage').val('10');
-            table.page.len(10).draw();
-        });
-    }
-});
-</script>
-@endpush

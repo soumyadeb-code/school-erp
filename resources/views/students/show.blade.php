@@ -44,6 +44,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <p><strong>Class:</strong> {{ $student->schoolClass ? $student->schoolClass->class_name : '-' }}</p>
+                        <p><strong>Next Class:</strong> {{ $student->schoolClass && $student->schoolClass->nextClass ? $student->schoolClass->nextClass->class_name : '-' }}</p>
                         <p><strong>Roll:</strong> {{ $student->roll ?? '-' }}</p>
                         <p><strong>Medium:</strong> {{ ucfirst($student->medium) }}</p>
                         <p><strong>Gender:</strong> {{ ucfirst($student->gender) }}</p>

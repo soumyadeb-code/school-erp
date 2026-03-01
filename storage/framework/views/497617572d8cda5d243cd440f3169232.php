@@ -161,20 +161,35 @@
                 </div>
             </li>
             
-            <!-- Fee Collection -->
+            <!-- Payment -->
             <li class="nav-item">
-                <a class="nav-link" href="<?php echo e(route('students.fee-collection')); ?>">
-                    <i class="fas fa-hand-holding-usd"></i>
-                    Fee Collection
+                <a class="nav-link" data-bs-toggle="collapse" href="#paymentMenu">
+                    <i class="fas fa-credit-card"></i>
+                    Payment
+                    <i class="fas fa-chevron-down float-end"></i>
                 </a>
-            </li>
-            
-            <!-- Bill History -->
-            <li class="nav-item">
-                <a class="nav-link" href="<?php echo e(route('students.bill-history')); ?>">
-                    <i class="fas fa-history"></i>
-                    Bill History
-                </a>
+                <div class="collapse" id="paymentMenu">
+                    <ul class="nav flex-column ms-3">
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?php echo e(route('students.fee-collection')); ?>">
+                                <i class="fas fa-hand-holding-usd"></i>
+                                Fee Collection
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?php echo e(route('students.bill-history')); ?>">
+                                <i class="fas fa-history"></i>
+                                All Bills History
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?php echo e(route('students.list')); ?>">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                                Student Bill History
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </li>
             
             <!-- Maintenance -->

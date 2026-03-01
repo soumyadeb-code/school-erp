@@ -215,11 +215,11 @@ margin-top: 30px;
             <span class="dots-line" style="min-width:50px;">{{ $receipt->student->student_id }}</span>
 
 <span class="label" style="margin-left:20px; font-weight:600;">Medium:</span> 
-            <span class="dots-line" style="min-width:10px;">{{ $receipt->student->medium }}</span><br>
+            <span class="dots-line" style="min-width:10px;">{{ ucfirst($receipt->student->medium) }}</span><br>
 <br>
 
 <span class="label" style=" font-weight:600;">For the:</span> 
-            <span class="dots-line" style="min-width:10px;">Admission/Registration</span>
+            <span class="dots-line" style="min-width:10px;">{{ ucfirst($receipt->bill_type) }}</span>
 
 
 
@@ -337,11 +337,11 @@ margin-top: 30px;
             <span class="dots-line" style="min-width:50px;">{{ $receipt->student->student_id }}</span>
 
 <span class="label" style="margin-left:20px; font-weight:600;">Medium:</span> 
-            <span class="dots-line" style="min-width:10px;">{{ $receipt->student->medium }}</span><br>
+            <span class="dots-line" style="min-width:10px;">{{ ucfirst($receipt->student->medium) }}</span><br>
 <br>
 
 <span class="label" style=" font-weight:600;">For the:</span> 
-            <span class="dots-line" style="min-width:10px;">Admission/Registration</span>
+            <span class="dots-line" style="min-width:10px;">{{ ucfirst($receipt->bill_type) }}</span>
         </div>
 
         <!-- TABLE (duplicate) -->
