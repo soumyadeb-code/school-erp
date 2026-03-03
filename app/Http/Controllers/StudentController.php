@@ -361,7 +361,7 @@ class StudentController extends Controller
         
         $studentId = $yearCode . $schoolCode . $newNumber;
 
-        // Create student
+// Create student
         $student = Student::create([
             'school_id' => $schoolId,
             'student_id' => $studentId,
@@ -376,6 +376,7 @@ class StudentController extends Controller
             'phone' => $request->phone,
             'gender' => $request->gender,
             'address' => $request->address,
+            'bus_destination_id' => $request->bus_destination_id,
             'admission_status' => 'pending',
             'status' => 'active',
             'academic_year' => $academicYear ? $academicYear->year : date('Y'),
@@ -433,9 +434,8 @@ class StudentController extends Controller
             ->where('student_id', $student->id)
             ->sum('total_advance');
             
-        // Generate receipt number
+        // Generate receipt number - get the highest receipt_no across ALL bill types for this school
         $lastReceipt = Receipt::where('school_id', $schoolId)
-            ->where('bill_type', 'registration')
             ->orderBy('receipt_no', 'desc')
             ->first();
             
@@ -460,9 +460,8 @@ class StudentController extends Controller
         
         $schoolId = auth()->user()->school_id;
         
-        // Auto-generate receipt number
+        // Auto-generate receipt number - get the highest receipt_no across ALL bill types for this school
         $lastReceipt = Receipt::where('school_id', $schoolId)
-            ->where('bill_type', 'registration')
             ->orderBy('receipt_no', 'desc')
             ->first();
         $receiptNo = $lastReceipt ? $lastReceipt->receipt_no + 1 : 1;
@@ -626,13 +625,10 @@ class StudentController extends Controller
             ->where('student_id', $student->id)
             ->sum('total_advance');
             
-        // Generate receipt number
+        // Generate receipt number - get the highest receipt_no across ALL bill types for this school
         $lastReceipt = Receipt::where('school_id', $schoolId)
-            ->where('bill_type', 'admission')
             ->orderBy('receipt_no', 'desc')
             ->first();
-
-            // dd($lastReceipt);
             
         $receiptNo = $lastReceipt ? $lastReceipt->receipt_no + 1 : 1;
             
@@ -655,9 +651,8 @@ class StudentController extends Controller
         
         $schoolId = auth()->user()->school_id;
         
-        // Auto-generate receipt number - don't rely on form value
+        // Auto-generate receipt number - get the highest receipt_no across ALL bill types for this school
         $lastReceipt = Receipt::where('school_id', $schoolId)
-            ->where('bill_type', 'admission')
             ->orderBy('receipt_no', 'desc')
             ->first();
         $receiptNo = $lastReceipt ? $lastReceipt->receipt_no + 1 : 1;
@@ -1091,6 +1086,7 @@ class StudentController extends Controller
         if ($academicYear) {
             $booksetPrice = BooksetPrice::where('school_id', $schoolId)
                 ->where('academic_year_id', $academicYear->id)
+                ->where('class_id', $student->class_id)
                 ->where('medium', $student->medium)
                 ->where('status', 'active')
                 ->first();
@@ -1127,6 +1123,9 @@ class StudentController extends Controller
         
         $schoolId = auth()->user()->school_id;
         
+        // Load bus destination relationship
+        $student->load('busDestination');
+        
         // Get all academic years
         $academicYears = AcademicYear::where('school_id', $schoolId)
             ->orderBy('year', 'desc')
@@ -1149,8 +1148,16 @@ class StudentController extends Controller
             $tuitionFee = $classFee ? $classFee->tuition_fee : 0;
         }
         
-        // Get bus fee
+        // Get bus fee and destination based on student's bus destination
         $busFee = 0;
+        $busDestinationName = null;
+        if ($student->bus_destination_id) {
+            $busFeeRecord = BusFee::where('school_id', $schoolId)
+                ->where('id', $student->bus_destination_id)
+                ->first();
+            $busFee = $busFeeRecord ? $busFeeRecord->price : 0;
+            $busDestinationName = $busFeeRecord ? $busFeeRecord->destination : null;
+        }
         
         // Get old due
         $oldDue = StudentDue::where('school_id', $schoolId)
@@ -1177,6 +1184,7 @@ class StudentController extends Controller
             'selectedYear',
             'tuitionFee',
             'busFee',
+            'busDestinationName',
             'oldDue',
             'advance',
             'payments'
@@ -1210,9 +1218,19 @@ class StudentController extends Controller
             $tuitionFee = $classFee ? $classFee->tuition_fee : 0;
         }
         
-        // Get bus fee
-        $busFee = 0;
         
+        // Get bus fee based on student's bus destination
+        $busFee = 0;
+        if ($student->bus_destination_id) {
+            $busFeeRecord = BusFee::where('school_id', $schoolId)
+                ->where('id', $student->bus_destination_id)
+                ->first();
+
+            // print_r($busFeeRecord); // Debugging line to check the bus fee record
+
+            $busFee = $busFeeRecord ? $busFeeRecord->price : 0;
+        }
+        // dd($busFee);
         // Get discount rule
         $discountRule = DiscountRule::where('school_id', $schoolId)->first();
         
@@ -1237,9 +1255,8 @@ class StudentController extends Controller
                 ->toArray();
         }
             
-        // Generate receipt number
+        // Generate receipt number - get the highest receipt_no across ALL bill types for this school
         $lastReceipt = Receipt::where('school_id', $schoolId)
-            ->where('bill_type', 'monthly')
             ->orderBy('receipt_no', 'desc')
             ->first();
             
@@ -1299,7 +1316,14 @@ class StudentController extends Controller
             $tuitionFee = $classFee ? $classFee->tuition_fee : 0;
         }
         
+        // Get bus fee based on student's bus destination
         $busFee = 0;
+        if ($student->bus_destination_id) {
+            $busFeeRecord = BusFee::where('school_id', $schoolId)
+                ->where('id', $student->bus_destination_id)
+                ->first();
+            $busFee = $busFeeRecord ? $busFeeRecord->fee : 0;
+        }
 
         $selectedMonths = $request->months;
         $monthCount = count($selectedMonths);
@@ -1471,9 +1495,8 @@ class StudentController extends Controller
         $newDue = max(0, $finalTotal - $amountPaid);
         $newAdvance = max(0, $amountPaid - $finalTotal);
 
-        // Generate receipt number
+        // Generate receipt number - get the highest receipt_no across ALL bill types for this school
         $lastReceipt = Receipt::where('school_id', $schoolId)
-            ->where('bill_type', 'monthly')
             ->orderBy('receipt_no', 'desc')
             ->first();
 
@@ -1588,10 +1611,23 @@ class StudentController extends Controller
         $status = $request->input('status', '');
         $fromDate = $request->input('from_date', '');
         $toDate = $request->input('to_date', '');
+        $year = $request->input('year', '');
+        
+        // Get academic years for dropdown
+        $academicYears = AcademicYear::where('school_id', $schoolId)
+            ->orderBy('year', 'desc')
+            ->get();
         
         // Build the receipts query
         $receiptsQuery = Receipt::with(['student.schoolClass'])
             ->where('school_id', $schoolId);
+        
+        // Apply year filter
+        if ($year) {
+            $receiptsQuery->whereHas('student', function($q) use ($year) {
+                $q->where('academic_year', $year);
+            });
+        }
         
         // Apply search filter
         if ($query) {
@@ -1649,7 +1685,9 @@ class StudentController extends Controller
             'billType',
             'status',
             'fromDate',
-            'toDate'
+            'toDate',
+            'academicYears',
+            'year'
         ));
     }
 
@@ -1670,7 +1708,60 @@ class StudentController extends Controller
             return view('students.admission-receipt-print', compact('receipt', 'school'));
         }
         
-        return view('students.receipt', compact('receipt'));
+        // Check if it's a registration bill - use similar fallback
+        if ($receipt->bill_type === 'registration') {
+            $payment = (object) [
+                'receipt_no' => $receipt->receipt_no,
+                'payment_date' => $receipt->billing_date,
+                'student' => $receipt->student,
+                'academicYear' => null,
+                'month' => null,
+                'tuition_fee' => 0,
+                'bus_fee' => 0,
+                'discount' => $receipt->discount,
+                'total_fee' => $receipt->total_amount,
+                'paid_amount' => $receipt->paid_amount,
+            ];
+            
+            if ($receipt->student) {
+                $receipt->student->load('schoolClass');
+            }
+            
+            return view('students.receipt', compact('payment'));
+        }
+        
+        // For monthly bills, we need to create a payment object from the receipt
+        if ($receipt->bill_type === 'monthly') {
+            // Get monthly payments for this receipt
+            $payments = \App\Models\MonthlyPayment::where('receipt_id', $receipt->id)->get();
+            
+            if ($payments->isNotEmpty()) {
+                // Use the first payment for display
+                $payment = $payments->first();
+                $payment->load('student.schoolClass', 'academicYear');
+                return view('students.receipt', compact('payment'));
+            }
+        }
+        
+        // Fallback: Create a payment-like object for display
+        $payment = (object) [
+            'receipt_no' => $receipt->receipt_no,
+            'payment_date' => $receipt->billing_date,
+            'student' => $receipt->student,
+            'academicYear' => null,
+            'month' => null,
+            'tuition_fee' => 0,
+            'bus_fee' => 0,
+            'discount' => $receipt->discount,
+            'total_fee' => $receipt->total_amount,
+            'paid_amount' => $receipt->paid_amount,
+        ];
+        
+        if ($receipt->student) {
+            $receipt->student->load('schoolClass');
+        }
+        
+        return view('students.receipt', compact('payment'));
     }
 
     /**
@@ -1823,13 +1914,13 @@ class StudentController extends Controller
             $tuitionFee = $classFee ? $classFee->tuition_fee : 0;
         }
         
-        // Get bus fee for the student
+        // Get bus fee for the student (using busDestination relationship)
         $busFee = 0;
         if ($student->bus_destination_id) {
             $busFeeRecord = BusFee::where('school_id', $schoolId)
                 ->where('id', $student->bus_destination_id)
                 ->first();
-            $busFee = $busFeeRecord ? $busFeeRecord->fee : 0;
+            $busFee = $busFeeRecord ? $busFeeRecord->price : 0;
         }
         
         // Get all receipts for the student (all types: admission, registration, monthly)
@@ -1913,6 +2004,38 @@ class StudentController extends Controller
             'totalRegistrationPaid',
             'totalMonthlyPaid'
         ));
+    }
+
+    /**
+     * Search bus destinations with fees (AJAX).
+     * Returns matching destinations based on search query.
+     */
+    public function searchBusDestinations(Request $request)
+    {
+        $schoolId = auth()->user()->school_id;
+        $search = $request->query('q', '');
+        
+        $query = BusFee::where('school_id', $schoolId)
+            ->where('status', 'active');
+        
+        if ($search) {
+            $query->where('destination', 'like', '%' . $search . '%');
+        }
+        
+        $destinations = $query->orderBy('destination')
+            ->limit(10)
+            ->get(['id', 'destination', 'price']);
+        
+        return response()->json([
+            'success' => true,
+            'destinations' => $destinations->map(function($dest) {
+                return [
+                    'id' => $dest->id,
+                    'destination' => $dest->destination,
+                    'price' => number_format($dest->price, 2)
+                ];
+            })
+        ]);
     }
 
     /**

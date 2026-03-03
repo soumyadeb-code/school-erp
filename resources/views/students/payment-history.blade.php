@@ -2,7 +2,7 @@
 
 @section('title', 'Payment History')
 
-@section('page-title', 'Payment History')
+@section('page-title', ' Payment History')
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
@@ -10,6 +10,7 @@
     <li class="breadcrumb-item active">{{ $student->name }}</li>
 @endsection
 
+@section('content')
 <!-- Navigation Tabs -->
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
@@ -28,9 +29,6 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Payment History - {{ $student->name }} ({{ $student->student_id }})</h5>
         <div>
-            <a href="{{ route('students.monthly-bill', $student->id) }}" class="btn btn-primary btn-sm">
-                <i class="fas fa-plus"></i> Generate Bill
-            </a>
             <a href="{{ route('students.fee-collection') }}" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left"></i> Back
             </a>
@@ -46,7 +44,13 @@
             </div>
             <div class="col-md-3">
                 <div class="stat-card">
-                    <div class="text-muted small">Bus Fee</div>
+                    <div class="text-muted small">
+                        @if($student->busDestination)
+                            Bus Fee ({{ $student->busDestination->destination }})
+                        @else
+                            Bus Fee
+                        @endif
+                    </div>
                     <div class="fs-4 fw-bold">₹{{ number_format($busFee, 2) }}</div>
                 </div>
             </div>

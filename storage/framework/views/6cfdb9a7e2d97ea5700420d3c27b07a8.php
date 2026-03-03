@@ -16,13 +16,23 @@
     <!-- Left Side - Monthly Payment Table (Jan-Dec) -->
     <div class="col-lg-8">
         <div class="card mb-3">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-calendar-alt me-2"></i>Monthly Payment History
                     <?php if($selectedYear): ?>
                         <span class="badge bg-primary ms-2"><?php echo e($selectedYear->year); ?></span>
                     <?php endif; ?>
                 </h5>
+                <form method="GET" action="<?php echo e(route('students.student-bill-history', $student->id)); ?>" class="d-flex">
+                    <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <?php $__currentLoopData = $academicYears; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $acYear): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($acYear->id); ?>" <?php echo e($selectedYear && $selectedYear->id == $acYear->id ? 'selected' : ''); ?>>
+                                <?php echo e($acYear->year); ?>
+
+                            </option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </select>
+                </form>
             </div>
             <div class="card-body">
                 <?php if($selectedYear): ?>
@@ -37,7 +47,6 @@
                                 <th>Sub Total</th>
                                 <th>Status</th>
                                 <th>Receipt No</th>
-                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -120,17 +129,6 @@
                                             -
                                         <?php endif; ?>
                                     </td>
-                                    <td>
-                                        <?php if($payment && $payment->receipt_id): ?>
-                                            <a href="<?php echo e(route('students.receipt-view', $payment->receipt_id)); ?>" class="btn btn-sm btn-info" title="View Receipt">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        <?php else: ?>
-                                            <a href="<?php echo e(route('students.monthly-bill', $student->id)); ?>" class="btn btn-sm btn-primary" title="Pay Now">
-                                                <i class="fas fa-plus"></i> Pay
-                                            </a>
-                                        <?php endif; ?>
-                                    </td>
                                 </tr>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </tbody>
@@ -139,7 +137,7 @@
                                 <th colspan="2" class="text-end">Total:</th>
                                 <th>₹<?php echo e(number_format($totalBus, 2)); ?></th>
                                 <th>₹<?php echo e(number_format($totalSub, 2)); ?></th>
-                                <th colspan="3"></th>
+                                <th colspan="2"></th>
                             </tr>
                         </tfoot>
                     </table>
@@ -203,7 +201,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <a href="<?php echo e(route('students.receipt-view', $receipt->id)); ?>" class="btn btn-sm btn-info" title="View Receipt">
+                                    <a href="<?php echo e(route('students.receipt-view', $receipt->id)); ?>" target="_blank" class="btn btn-sm btn-info" title="View Receipt">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                 </td>
@@ -292,7 +290,9 @@
                         <td class="text-end">₹<?php echo e(number_format($tuitionFee, 2)); ?></td>
                     </tr>
                     <tr>
-                        <td>Bus Fee (Monthly):</td>
+                        <td>
+                           Bus Fee (Monthly): 
+                        </td>
                         <td class="text-end">₹<?php echo e(number_format($busFee, 2)); ?></td>
                     </tr>
                     <tr class="table-light">

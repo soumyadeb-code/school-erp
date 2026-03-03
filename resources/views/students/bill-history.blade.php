@@ -2,6 +2,13 @@
 
 @section('title', 'Bill History - School ERP')
 
+@section('page-title', 'Bill History')
+
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
+    <li class="breadcrumb-item active">Bill History</li>
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
@@ -50,34 +57,44 @@
                     <!-- Filters -->
                     <div class="row mb-4">
                         <div class="col-md-2">
-                            <select id="search_type" class="form-select">
-                                <option value="receipt">Receipt No</option>
-                                <option value="student">Student Name</option>
-                                <option value="phone">Phone</option>
+                            <select id="year" class="form-select">
+                                <option value="">All Years</option>
+                                @foreach($academicYears as $acYear)
+                                    <option value="{{ $acYear->year }}" {{ $year == $acYear->year ? 'selected' : '' }}>
+                                        {{ $acYear->year }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <input type="text" id="query" class="form-control" placeholder="Search..." value="">
+                            <select id="search_type" class="form-select">
+                                <option value="receipt" {{ $searchType == 'receipt' ? 'selected' : '' }}>Receipt No</option>
+                                <option value="student" {{ $searchType == 'student' ? 'selected' : '' }}>Student Name</option>
+                                <option value="phone" {{ $searchType == 'phone' ? 'selected' : '' }}>Phone</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" id="query" class="form-control" placeholder="Search..." value="{{ $query }}">
                         </div>
                         <div class="col-md-2">
                             <select id="bill_type" class="form-select">
                                 <option value="">All Types</option>
-                                <option value="admission">Admission</option>
-                                <option value="monthly">Monthly</option>
+                                <option value="admission" {{ $billType == 'admission' ? 'selected' : '' }}>Admission</option>
+                                <option value="monthly" {{ $billType == 'monthly' ? 'selected' : '' }}>Monthly</option>
                             </select>
                         </div>
                         <div class="col-md-2">
                             <select id="status" class="form-select">
                                 <option value="">All Status</option>
-                                <option value="paid">Paid</option>
-                                <option value="due">Due</option>
+                                <option value="paid" {{ $status == 'paid' ? 'selected' : '' }}>Paid</option>
+                                <option value="due" {{ $status == 'due' ? 'selected' : '' }}>Due</option>
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <input type="date" id="from_date" class="form-control" value="" placeholder="From Date">
+                            <input type="date" id="from_date" class="form-control" value="{{ $fromDate }}" placeholder="From Date">
                         </div>
                         <div class="col-md-2">
-                            <input type="date" id="to_date" class="form-control" value="" placeholder="To Date">
+                            <input type="date" id="to_date" class="form-control" value="{{ $toDate }}" placeholder="To Date">
                         </div>
                     </div>
                     <div class="row mt-2">
@@ -147,7 +164,7 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <a href="{{ route('students.receipt-view', $receipt->id) }}" class="btn btn-sm btn-info" title="View Receipt">
+                                        <a href="{{ route('students.receipt-view', $receipt->id) }}" target="_blank" class="btn btn-sm btn-info" title="View Receipt">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </td>
@@ -188,6 +205,7 @@ $(document).ready(function() {
 
     // Fetch bills with filters (AJAX)
     function fetchBills(page = 1) {
+        const year = $('#year').val();
         const searchType = $('#search_type').val();
         const query = $('#query').val();
         const billType = $('#bill_type').val();
@@ -199,6 +217,7 @@ $(document).ready(function() {
             url: '{{ route("students.bill-history.ajax") }}',
             type: 'GET',
             data: {
+                year: year,
                 search_type: searchType,
                 query: query,
                 bill_type: billType,
@@ -240,7 +259,7 @@ $(document).ready(function() {
                             statusBadge = '<span class="badge bg-secondary">' + receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1) + '</span>';
                         }
 
-                        let actionBtn = '<a href="/students/receipt-view/' + receipt.id + '" class="btn btn-sm btn-info" title="View Receipt"><i class="fas fa-eye"></i></a>';
+                        let actionBtn = '<a href="/students/receipt-view/' + receipt.id + '" target="_blank" class="btn btn-sm btn-info" title="View Receipt"><i class="fas fa-eye"></i></a>';
 
                         const billingDate = new Date(receipt.billing_date).toLocaleDateString('en-GB');
 
@@ -301,6 +320,7 @@ $(document).ready(function() {
 
     // Reset button click
     $('#resetBtn').on('click', function() {
+        $('#year').val('');
         $('#search_type').val('receipt');
         $('#query').val('');
         $('#bill_type').val('');
@@ -316,7 +336,7 @@ $(document).ready(function() {
     }, 500));
 
     // Filter dropdowns change
-    $('#bill_type, #status').on('change', function() {
+    $('#year, #bill_type, #status').on('change', function() {
         fetchBills(1);
     });
 

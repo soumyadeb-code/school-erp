@@ -56,13 +56,13 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Conveyance Charge (Monthly):</label>
-                        <input type="text" class="form-control" readonly id="conveyanceCharge" value="<?php echo e($busFee); ?>">
+                        <label class="form-label">Bus Fee (Monthly):</label>
+                        <input type="text" class="form-control" readonly id="busFee" value="<?php echo e($busFee); ?>">
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Sub-Total:</label>
-                        <input type="text" class="form-control" id="subTotal" readonly>
+                        <input type="text" class="form-control" id="subTotal" value="0.00" readonly>
                     </div>
                     
                     <div class="mb-3">
@@ -184,19 +184,26 @@ document.addEventListener("DOMContentLoaded", function() {
     // Set today's date
     paymentDateEl.value = new Date().toISOString().split('T')[0];
     
-    // Calculate function
+    // Calculate function - calculates cumulative fee based on each selected month
     function calculate() {
-        // Count selected months
-        var monthsSelected = 0;
+        // Monthly fee per month (tuition + bus)
+        var monthlyFee = tuitionFee + busFee;
+        
+        // Calculate cumulative sub-total: each selected month adds (tuitionFee + busFee)
+        var cumulativeSubTotal = 0;
+        
         monthCheckboxes.forEach(function(cb) {
-            if (cb.checked) monthsSelected++;
+            if (cb.checked) {
+                // Each checked month adds the full monthly fee to cumulative total
+                cumulativeSubTotal += monthlyFee;
+            }
         });
         
         // Get discount
         var discount = parseFloat(discountEl.value) || 0;
         
-        // Calculate sub total
-        var subTotalVal = (tuitionFee + busFee) * monthsSelected;
+        // Sub total is cumulative - adds up for each selected month
+        var subTotalVal = cumulativeSubTotal;
         
         // Calculate total
         var total = subTotalVal + oldDue - advance - discount;
@@ -219,23 +226,33 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
     
-    // Month checkbox change
+    // Month checkbox change - shows next month BLANK when current is checked
     monthCheckboxes.forEach(function(cb) {
         cb.addEventListener('change', function() {
             var idx = parseInt(this.closest('.month-wrapper').dataset.index);
             var wrappers = document.querySelectorAll('.month-wrapper');
             
             if (this.checked) {
-                // Enable next month
+                // When checked: Always show next month (keep it BLANK/unchecked)
                 if (idx + 1 < wrappers.length) {
-                    var nextCb = wrappers[idx + 1].querySelector('input');
+                    var nextWrapper = wrappers[idx + 1];
+                    var nextCb = nextWrapper.querySelector('input');
+                    
+                    // Always show the next month wrapper
+                    nextWrapper.style.display = 'block';
+                    
+                    // Enable the checkbox if it's disabled
                     if (nextCb && nextCb.disabled) {
                         nextCb.disabled = false;
-                        wrappers[idx + 1].style.display = 'block';
+                    }
+                    
+                    // Keep it blank/unchecked
+                    if (nextCb) {
+                        nextCb.checked = false;
                     }
                 }
             } else {
-                // Disable subsequent months
+                // When unchecked: Disable and hide subsequent months
                 for (var i = idx + 1; i < wrappers.length; i++) {
                     var cb = wrappers[i].querySelector('input');
                     if (cb) {
@@ -245,6 +262,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 }
             }
+            
+            // Recalculate - cumulative fee adds up for each selected month
             calculate();
         });
     });

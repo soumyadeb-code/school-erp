@@ -185,6 +185,9 @@ Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->n
         // Get eligible classes based on age (AJAX)
         Route::get('/eligible-classes', [StudentController::class, 'getEligibleClasses'])->name('eligible-classes');
         
+        // Search bus destinations with fees (AJAX)
+        Route::get('/bus-destinations/search', [StudentController::class, 'searchBusDestinations'])->name('bus-destinations.search');
+        
         // Generate Admission PDF Data (API endpoint)
         Route::post('/generate-admission-data', [StudentController::class, 'generateAdmissionData'])->name('generate-admission-data');
         

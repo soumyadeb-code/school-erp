@@ -10,7 +10,7 @@ class BooksetPrice extends Model
 {
     use HasFactory;
 
-protected $fillable = [
+    protected $fillable = [
         'school_id',
         'academic_year_id',
         'class_id',
@@ -18,6 +18,7 @@ protected $fillable = [
         'book_price',
         'notebook_price',
         'total_price',
+        'status',
     ];
 
     protected $casts = [

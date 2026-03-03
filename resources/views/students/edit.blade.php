@@ -24,7 +24,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="name" class="form-label">Student Name</label>
-                        <input type="text" class="form-control" id="name" name="name" value="{{ old('name', $student->name) }}" required>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ old('name', $student->name) }}">
                         @error('name')
                             <div class="text-danger">{{ $message }}</div>
                         @enderror
@@ -43,7 +43,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="dob" class="form-label">Date of Birth</label>
-                        <input type="date" class="form-control" id="dob" name="dob" value="{{ old('dob', $student->dob) }}" required>
+                        <input type="date" class="form-control" id="dob" name="dob" value="{{ old('dob', $student->dob ? $student->dob->format('Y-m-d') : '') }}">
                         @error('dob')
                             <div class="text-danger">{{ $message }}</div>
                         @enderror
@@ -53,7 +53,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="gender" class="form-label">Gender</label>
-                        <select class="form-select" id="gender" name="gender" required>
+                        <select class="form-select" id="gender" name="gender">
                             <option value="male" {{ old('gender', $student->gender) == 'male' ? 'selected' : '' }}>Male</option>
                             <option value="female" {{ old('gender', $student->gender) == 'female' ? 'selected' : '' }}>Female</option>
                             <option value="other" {{ old('gender', $student->gender) == 'other' ? 'selected' : '' }}>Other</option>
@@ -66,7 +66,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="class_id" class="form-label">Class</label>
-                        <select class="form-select" id="class_id" name="class_id" required>
+                        <select class="form-select" id="class_id" name="class_id">
                             @foreach($classes as $class)
                                 <option value="{{ $class->id }}" {{ old('class_id', $student->class_id) == $class->id ? 'selected' : '' }}>
                                     {{ $class->class_name }}
@@ -88,7 +88,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="medium" class="form-label">Medium</label>
-                        <select class="form-select" id="medium" name="medium" required>
+                        <select class="form-select" id="medium" name="medium">
                             <option value="Bengali" {{ old('medium', $student->medium) == 'Bengali' ? 'selected' : '' }}>Bengali</option>
                             <option value="English" {{ old('medium', $student->medium) == 'English' ? 'selected' : '' }}>English</option>
                             <option value="Hindi" {{ old('medium', $student->medium) == 'Hindi' ? 'selected' : '' }}>Hindi</option>
@@ -180,6 +180,19 @@
                 <textarea class="form-control" id="address" name="address" rows="3">{{ old('address', $student->address) }}</textarea>
             </div>
             
+            <div class="mb-3">
+                <label class="form-label">Transport / Convenience</label>
+                <div class="position-relative">
+                    <input type="text" class="form-control" id="bus_search" placeholder="Search bus destination..." autocomplete="off" value="{{ $student->busDestination->destination ?? '' }}">
+                    <input type="hidden" name="bus_destination_id" id="bus_destination_id" value="{{ $student->bus_destination_id }}">
+                    <button class="btn btn-outline-secondary position-absolute end-0 top-0 h-100 rounded-start-0" type="button" id="clear_bus" style="z-index: 5;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <ul class="list-group position-absolute w-100 shadow" id="bus_dropdown" style="z-index: 1000; max-height: 200px; overflow-y: auto; display: none;"></ul>
+                </div>
+                <div class="form-text" id="bus_fee_display">Bus Fee: ₹0</div>
+            </div>
+            
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
@@ -228,4 +241,92 @@
         </form>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    // Bus destination search
+    const busSearchInput = document.getElementById('bus_search');
+    const busDestinationIdInput = document.getElementById('bus_destination_id');
+    const busFeeDisplay = document.getElementById('bus_fee_display');
+    const clearBusBtn = document.getElementById('clear_bus');
+    const busDropdown = document.getElementById('bus_dropdown');
+    let busTimeout = null;
+    
+    if (busSearchInput && busDropdown) {
+        busSearchInput.addEventListener('keyup', function() {
+            const query = this.value.trim();
+            if (busTimeout) clearTimeout(busTimeout);
+            if (query === '') {
+                hideBusDropdown();
+                clearBusSelection();
+                return;
+            }
+            busTimeout = setTimeout(function() {
+                searchBusDestinations(query);
+            }, 300);
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!busSearchInput.contains(e.target) && !busDropdown.contains(e.target)) {
+                hideBusDropdown();
+            }
+        });
+    }
+    
+    function searchBusDestinations(query) {
+        const url = '{{ route("students.bus-destinations.search") }}?q=' + encodeURIComponent(query);
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.destinations.length > 0) {
+                    showBusDropdown(data.destinations);
+                } else {
+                    hideBusDropdown();
+                    busFeeDisplay.innerHTML = '<span class="text-danger">No destinations available</span>';
+                    busDestinationIdInput.value = '';
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+    
+    function showBusDropdown(destinations) {
+        busDropdown.innerHTML = '';
+        destinations.forEach(dest => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-action cursor-pointer';
+            li.innerHTML = '<strong>' + dest.destination + '</strong> - <span class="text-success">₹' + dest.price + '</span>';
+            li.addEventListener('click', function() {
+                selectBusDestination(dest);
+            });
+            busDropdown.appendChild(li);
+        });
+        busDropdown.style.display = 'block';
+    }
+    
+    function selectBusDestination(dest) {
+        busSearchInput.value = dest.destination;
+        busDestinationIdInput.value = dest.id;
+        busFeeDisplay.innerHTML = '<span class="text-success">Bus Fee: ₹' + dest.price + '</span>';
+        hideBusDropdown();
+    }
+    
+    function hideBusDropdown() {
+        if (busDropdown) busDropdown.style.display = 'none';
+    }
+    
+    function clearBusSelection() {
+        if (busSearchInput) busSearchInput.value = '';
+        if (busDestinationIdInput) busDestinationIdInput.value = '';
+        if (busFeeDisplay) busFeeDisplay.textContent = '';
+    }
+    
+    if (clearBusBtn) {
+        clearBusBtn.addEventListener('click', function() {
+            clearBusSelection();
+            hideBusDropdown();
+        });
+    }
+</script>
 @endsection

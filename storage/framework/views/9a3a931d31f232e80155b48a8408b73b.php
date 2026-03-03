@@ -1,15 +1,15 @@
-@extends('layouts.app')
 
-@section('title', 'Student Admission')
 
-@section('page-title', 'Student Admission')
+<?php $__env->startSection('title', 'Student Admission'); ?>
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
+<?php $__env->startSection('page-title', 'Student Admission'); ?>
+
+<?php $__env->startSection('breadcrumb'); ?>
+    <li class="breadcrumb-item"><a href="<?php echo e(url('/dashboard')); ?>">Home</a></li>
     <li class="breadcrumb-item active">Admission</li>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="row">
     <div class="col-md-4">
         <div class="card mb-4">
@@ -17,8 +17,8 @@
                 <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>New Admission</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ route('students.admission.store') }}">
-                    @csrf
+                <form method="POST" action="<?php echo e(route('students.admission.store')); ?>">
+                    <?php echo csrf_field(); ?>
                     
                     <div class="mb-3">
                         <label class="form-label">Student Name <span class="text-danger">*</span></label>
@@ -35,11 +35,11 @@
                         <label class="form-label">Class <span class="text-danger">*</span></label>
                         <select class="form-select" name="class_id" id="class_id" required>
                             <option value="">Select Date of Birth first</option>
-                            @foreach($classes as $class)
-                            <option value="{{ $class->id }}" data-min-age="{{ $class->minimum_age }}">
-                                {{ $class->class_name }} (Min Age: {{ $class->minimum_age }}+)
+                            <?php $__currentLoopData = $classes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $class): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($class->id); ?>" data-min-age="<?php echo e($class->minimum_age); ?>">
+                                <?php echo e($class->class_name); ?> (Min Age: <?php echo e($class->minimum_age); ?>+)
                             </option>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                         <div class="form-text text-muted" id="class-hint">Enter Date of Birth to see eligible classes</div>
                     </div>
@@ -136,49 +136,49 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($pendingStudents as $student)
+                            <?php $__empty_1 = true; $__currentLoopData = $pendingStudents; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $student): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                             <tr>
-                                <td><span class="badge bg-secondary">{{ $student->student_id }}</span></td>
-                                <td>{{ $student->name }}</td>
-                                <td>{{ $student->schoolClass->class_name ?? 'N/A' }}</td>
-                                <td>{{ \Carbon\Carbon::parse($student->dob)->format('d M Y') }}</td>
-                                <td>{{ ucfirst($student->medium) }}</td>
-                                <td>{{ \Carbon\Carbon::parse($student->admission_date)->format('d M Y') }}</td>
+                                <td><span class="badge bg-secondary"><?php echo e($student->student_id); ?></span></td>
+                                <td><?php echo e($student->name); ?></td>
+                                <td><?php echo e($student->schoolClass->class_name ?? 'N/A'); ?></td>
+                                <td><?php echo e(\Carbon\Carbon::parse($student->dob)->format('d M Y')); ?></td>
+                                <td><?php echo e(ucfirst($student->medium)); ?></td>
+                                <td><?php echo e(\Carbon\Carbon::parse($student->admission_date)->format('d M Y')); ?></td>
                                 <td>
-                                    @if($student->admission_status === 'pending')
+                                    <?php if($student->admission_status === 'pending'): ?>
                                         <span class="badge bg-warning">Pending</span>
-                                    @elseif($student->status === 'active')
+                                    <?php elseif($student->status === 'active'): ?>
                                         <span class="badge bg-success">Active</span>
-                                    @else
-                                        <span class="badge bg-secondary">{{ ucfirst($student->status) }}</span>
-                                    @endif
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary"><?php echo e(ucfirst($student->status)); ?></span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
-                                    @if($student->admission_status === 'pending')
-                                    <a href="{{ route('students.billing', $student->id) }}" class="btn btn-sm btn-success">
+                                    <?php if($student->admission_status === 'pending'): ?>
+                                    <a href="<?php echo e(route('students.billing', $student->id)); ?>" class="btn btn-sm btn-success">
                                         <i class="fas fa-file-invoice"></i> Generate Bill
                                     </a>
-                                    <form method="POST" action="{{ route('students.destroy', $student->id) }}" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
+                                    <form method="POST" action="<?php echo e(route('students.destroy', $student->id)); ?>" class="d-inline">
+                                        <?php echo csrf_field(); ?>
+                                        <?php echo method_field('DELETE'); ?>
                                         <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this student? This action cannot be undone.')">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
-                                    @else
-                                    <a href="{{ route('students.show', $student->id) }}" class="btn btn-sm btn-info">
+                                    <?php else: ?>
+                                    <a href="<?php echo e(route('students.show', $student->id)); ?>" class="btn btn-sm btn-info">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    @endif
+                                    <?php endif; ?>
                                 </td>
                             </tr>
-                            @empty
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                             <tr>
                                 <td colspan="8" class="text-center text-muted py-4">
                                     No students found
                                 </td>
                             </tr>
-                            @endforelse
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -186,12 +186,12 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('scripts')
+<?php $__env->startSection('scripts'); ?>
 <script>
 // Store all classes data for filtering
-const allClasses = @json($classes);
+const allClasses = <?php echo json_encode($classes, 15, 512) ?>;
 
 document.addEventListener('DOMContentLoaded', function() {
     const dobInput = document.getElementById('dob');
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function fetchEligibleClasses(dob) {
-        const url = '{{ route("students.eligible-classes") }}?dob=' + dob;
+        const url = '<?php echo e(route("students.eligible-classes")); ?>?dob=' + dob;
         
         fetch(url)
             .then(response => response.json())
@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function searchBusDestinations(query) {
-        const url = '{{ route("students.bus-destinations.search") }}?q=' + encodeURIComponent(query);
+        const url = '<?php echo e(route("students.bus-destinations.search")); ?>?q=' + encodeURIComponent(query);
         fetch(url)
             .then(response => response.json())
             .then(data => {
@@ -366,8 +366,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Check for receipt_id in session and open in new tab
-    @if(session('receipt_id'))
-    const receiptUrl = '{{ route("students.receipt-view", session("receipt_id")) }}';
+    <?php if(session('receipt_id')): ?>
+    const receiptUrl = '<?php echo e(route("students.receipt-view", session("receipt_id"))); ?>';
     const link = document.createElement('a');
     link.href = receiptUrl;
     link.target = '_blank';
@@ -375,7 +375,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    @endif
+    <?php endif; ?>
 });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH E:\AI\Laravel\Blackbox-school\resources\views/students/admission.blade.php ENDPATH**/ ?>

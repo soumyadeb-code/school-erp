@@ -16,13 +16,22 @@
     <!-- Left Side - Monthly Payment Table (Jan-Dec) -->
     <div class="col-lg-8">
         <div class="card mb-3">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-calendar-alt me-2"></i>Monthly Payment History
                     @if($selectedYear)
                         <span class="badge bg-primary ms-2">{{ $selectedYear->year }}</span>
                     @endif
                 </h5>
+                <form method="GET" action="{{ route('students.student-bill-history', $student->id) }}" class="d-flex">
+                    <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+                        @foreach($academicYears as $acYear)
+                            <option value="{{ $acYear->id }}" {{ $selectedYear && $selectedYear->id == $acYear->id ? 'selected' : '' }}>
+                                {{ $acYear->year }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
             </div>
             <div class="card-body">
                 @if($selectedYear)
@@ -37,7 +46,6 @@
                                 <th>Sub Total</th>
                                 <th>Status</th>
                                 <th>Receipt No</th>
-                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -113,17 +121,6 @@
                                             -
                                         @endif
                                     </td>
-                                    <td>
-                                        @if($payment && $payment->receipt_id)
-                                            <a href="{{ route('students.receipt-view', $payment->receipt_id) }}" class="btn btn-sm btn-info" title="View Receipt">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        @else
-                                            <a href="{{ route('students.monthly-bill', $student->id) }}" class="btn btn-sm btn-primary" title="Pay Now">
-                                                <i class="fas fa-plus"></i> Pay
-                                            </a>
-                                        @endif
-                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -132,7 +129,7 @@
                                 <th colspan="2" class="text-end">Total:</th>
                                 <th>₹{{ number_format($totalBus, 2) }}</th>
                                 <th>₹{{ number_format($totalSub, 2) }}</th>
-                                <th colspan="3"></th>
+                                <th colspan="2"></th>
                             </tr>
                         </tfoot>
                     </table>
@@ -196,7 +193,7 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <a href="{{ route('students.receipt-view', $receipt->id) }}" class="btn btn-sm btn-info" title="View Receipt">
+                                    <a href="{{ route('students.receipt-view', $receipt->id) }}" target="_blank" class="btn btn-sm btn-info" title="View Receipt">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                 </td>
@@ -283,7 +280,9 @@
                         <td class="text-end">₹{{ number_format($tuitionFee, 2) }}</td>
                     </tr>
                     <tr>
-                        <td>Bus Fee (Monthly):</td>
+                        <td>
+                           Bus Fee (Monthly): 
+                        </td>
                         <td class="text-end">₹{{ number_format($busFee, 2) }}</td>
                     </tr>
                     <tr class="table-light">

@@ -598,6 +598,20 @@ class SchoolAdminController extends Controller
                 ->withInput();
         }
 
+        // Check for duplicate - exclude current record
+        $exists = ClassFee::where('school_id', auth()->user()->school_id)
+            ->where('academic_year_id', $request->academic_year_id)
+            ->where('class_id', $request->class_id)
+            ->where('medium', $request->medium)
+            ->where('id', '!=', $classFee->id)
+            ->exists();
+
+        if ($exists) {
+            return redirect()->back()
+                ->with('error', 'Fee for this class, medium and year already exists.')
+                ->withInput();
+        }
+
         $classFee->update([
             'academic_year_id' => $request->academic_year_id,
             'class_id' => $request->class_id,
