@@ -97,24 +97,19 @@
                     <div class="row ml-2" id="month-container">
                         @php
                         $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                        $unpaidShown = false;
                         $index = 0;
                         @endphp
                         @foreach($months as $monthName)
                             @php
                             $isPaid = in_array($index + 1, $paidMonths);
                             @endphp
-                            <div class="form-check col-6 month-wrapper" data-index="{{ $index }}" style="{{ ($isPaid || !$unpaidShown) ? '' : 'display: none;' }}">
+                            <div class="form-check col-6 month-wrapper" data-index="{{ $index }}" style="{{ $isPaid ? 'display: none;' : '' }}">
                                 <label class="form-check-label">
                                     @if($isPaid)
                                         <input type="checkbox" class="form-check-input" checked disabled>
                                         {{ $monthName }}
-                                    @elseif(!$unpaidShown)
-                                        <input type="checkbox" class="form-check-input month-chk" name="months[]" value="{{ $index + 1 }}">
-                                        {{ $monthName }}
-                                        @php $unpaidShown = true; @endphp
                                     @else
-                                        <input type="checkbox" class="form-check-input" disabled>
+                                        <input type="checkbox" class="form-check-input month-chk" name="months[]" value="{{ $index + 1 }}">
                                         {{ $monthName }}
                                     @endif
                                 </label>
