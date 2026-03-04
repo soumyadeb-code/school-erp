@@ -26,6 +26,7 @@
                     <div class="mb-3">
                         <label class="form-label">Receipt No:</label>
                         <input type="text" class="form-control" name="receipt_no" id="receipt_no" value="{{ $receiptNo }}" required>
+                        <small class="form-text" id="receiptValidationMsg"></small>
                     </div>
                     
                     <input type="hidden" name="pay_year" value="{{ $academicYear ? $academicYear->year : date('Y') }}">
@@ -136,9 +137,9 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Amount Paid:</label><br>
-                        <input type="radio" name="paymentOption" value="total" checked> Total
-                        <input type="radio" name="paymentOption" value="custom" class="ms-3"> Custom
-                        <input type="number" class="form-control mt-2" name="amount_paid" id="amountPaid" required>
+                        <input type="radio" name="paymentOption" value="total" id="paymentTotal"> Total
+                        <input type="radio" name="paymentOption" value="custom" id="paymentCustom" class="ms-3"> Custom
+                        <input type="number" class="form-control mt-2" name="amount_paid" id="amountPaid" readonly required>
                     </div>
                     
                     <div class="mb-3">
@@ -187,9 +188,10 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Calculate auto discount based on billing date vs selected month
     // Rule:
-    // - ₹40 discount if payment is in the SAME month as selected month
-    // - ₹10 discount if payment is in NEXT month AND before day 7
-    // - ₹0 discount otherwise
+    // - ₹40 discount if payment is in the SAME month as selected month (same month)
+    // - ₹10 discount if payment is in NEXT month AND before day 7 (next month)
+    // - ₹40 discount if payment is for ADVANCE months (future months beyond next month)
+    // - ₹0 discount otherwise (past months or late payment)
     function calculateAutoDiscount() {
         var billingDate = new Date(paymentDateEl.value);
         var billingMonth = billingDate.getMonth() + 1; // 1-12
@@ -225,25 +227,23 @@ document.addEventListener("DOMContentLoaded", function() {
                 discount = sameMonthDiscount; // ₹40
             }
             // NEXT MONTH DISCOUNT: payment month == selected month + 1 AND day <= 7
-            else {
-                // Calculate next month of the selected month
-                var nextMonth = selectedMonth + 1;
-                var nextMonthYear = billingYear;
-                
+            else if (billingMonth === selectedMonth + 1 || (selectedMonth === 12 && billingMonth === 1)) {
                 // Handle year boundary (December to January)
-                if (selectedMonth === 12) {
-                    nextMonth = 1;
-                    nextMonthYear = billingYear + 1;
-                }
-                
-                // Check if billing is in next month AND before or on day 7
-                if (billingMonth === nextMonth && billingDay <= 7) {
+                if (billingDay <= 7) {
                     discount = nextMonthDiscount; // ₹10
+                } else {
+                    discount = 0; // After 7th of next month = no discount
                 }
-                // Otherwise no discount
-                else {
-                    discount = 0;
-                }
+            }
+            // ADVANCE MONTHS: payment for future months (billing month < selected month)
+            // Example: Pay in March for April-December = advance months = ₹40 each
+            else if (selectedMonth > billingMonth) {
+                discount = sameMonthDiscount; // ₹40 for advance payments
+            }
+            // PAST MONTHS: payment for past months (billing month > selected month + 1)
+            // Example: Pay in March for January = past month = no discount
+            else {
+                discount = 0;
             }
             
             totalDiscount += discount;
@@ -433,18 +433,87 @@ document.addEventListener("DOMContentLoaded", function() {
     // Payment date change - recalculate auto discount
     paymentDateEl.addEventListener('change', calculate);
     
-    // Payment option change
-    for (var i = 0; i < paymentOptions.length; i++) {
-        paymentOptions[i].addEventListener('change', function() {
-            if (this.value === 'total') {
-                amountPaidEl.value = totalAmountEl.value;
-            } else {
-                amountPaidEl.value = '';
-                amountPaidEl.focus();
-            }
+    // Payment option change - toggle Amount Paid readonly
+    var paymentTotalEl = document.getElementById('paymentTotal');
+    var paymentCustomEl = document.getElementById('paymentCustom');
+    
+    paymentTotalEl.addEventListener('change', function() {
+        if (this.checked) {
+            amountPaidEl.readOnly = true;
+            amountPaidEl.value = totalAmountEl.value;
             calculate();
-        });
+        }
+    });
+    
+    paymentCustomEl.addEventListener('change', function() {
+        if (this.checked) {
+            amountPaidEl.readOnly = false;
+            amountPaidEl.value = '';
+            amountPaidEl.focus();
+            calculate();
+        }
+    });
+    
+    // AJAX Receipt No validation
+    var receiptNoEl = document.getElementById('receipt_no');
+    var receiptValidationMsg = document.getElementById('receiptValidationMsg');
+    var submitBtn = document.querySelector('button[type="submit"]');
+    var isReceiptValid = true;
+    var receiptCheckTimeout = null;
+    
+    function checkReceiptNo() {
+        var receiptNo = receiptNoEl.value.trim();
+        
+        if (!receiptNo) {
+            receiptValidationMsg.textContent = '';
+            receiptValidationMsg.className = 'form-text';
+            isReceiptValid = true;
+            updateSubmitButton();
+            return;
+        }
+        
+        // Show loading message
+        receiptValidationMsg.textContent = 'Checking...';
+        receiptValidationMsg.className = 'form-text text-muted';
+        
+        // Send AJAX request
+        fetch('{{ route("students.check-receipt-no") }}?receipt_no=' + encodeURIComponent(receiptNo))
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    receiptValidationMsg.textContent = 'Duplicate receipt number! This receipt already exists in the database.';
+                    receiptValidationMsg.className = 'form-text text-danger';
+                    isReceiptValid = false;
+                } else {
+                    receiptValidationMsg.textContent = 'Receipt number is available.';
+                    receiptValidationMsg.className = 'form-text text-success';
+                    isReceiptValid = true;
+                }
+                updateSubmitButton();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                receiptValidationMsg.textContent = '';
+                isReceiptValid = true;
+                updateSubmitButton();
+            });
     }
+    
+    function updateSubmitButton() {
+        if (submitBtn) {
+            if (isReceiptValid) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+    }
+    
+    receiptNoEl.addEventListener('input', function() {
+        // Debounce the check
+        clearTimeout(receiptCheckTimeout);
+        receiptCheckTimeout = setTimeout(checkReceiptNo, 500);
+    });
     
     // Initialize months visibility on page load
     initializeMonths();

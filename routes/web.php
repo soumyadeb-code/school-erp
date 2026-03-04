@@ -161,6 +161,9 @@ Route::get('/fees/discount', [SchoolAdminController::class, 'discountRules'])->n
         // Student list page (renders the view)
         Route::get('/list', [StudentController::class, 'index'])->name('list');
         
+        // Check receipt number uniqueness (AJAX)
+        Route::get('/check-receipt-no', [StudentController::class, 'checkReceiptNo'])->name('check-receipt-no');
+        
         // Student search (AJAX)
         Route::get('/search', [StudentController::class, 'search'])->name('search');
         

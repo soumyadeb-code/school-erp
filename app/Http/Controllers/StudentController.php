@@ -146,6 +146,23 @@ class StudentController extends Controller
         ]);
     }
 
+    /**
+     * Check if receipt number already exists (AJAX)
+     */
+    public function checkReceiptNo(Request $request)
+    {
+        $receiptNo = $request->query('receipt_no');
+        
+        if (!$receiptNo) {
+            return response()->json(['exists' => false]);
+        }
+        
+        // Check in receipts table
+        $exists = Receipt::where('receipt_no', $receiptNo)->exists();
+        
+        return response()->json(['exists' => $exists]);
+    }
+
     // ==================== ADMISSION ====================
     
 /**
