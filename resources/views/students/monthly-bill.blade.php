@@ -185,10 +185,14 @@ document.addEventListener("DOMContentLoaded", function() {
     // Custom discount variable
     var customDiscount = 0;
     
-    // Calculate auto discount based on billing date vs first selected month
+    // Calculate auto discount based on billing date vs selected month
+    // Rule:
+    // - ₹40 discount if payment is in the SAME month as selected month
+    // - ₹10 discount if payment is in NEXT month AND before day 7
+    // - ₹0 discount otherwise
     function calculateAutoDiscount() {
         var billingDate = new Date(paymentDateEl.value);
-        var billingMonth = billingDate.getMonth() + 1;
+        var billingMonth = billingDate.getMonth() + 1; // 1-12
         var billingYear = billingDate.getFullYear();
         var billingDay = billingDate.getDate();
         
@@ -197,47 +201,53 @@ document.addEventListener("DOMContentLoaded", function() {
             return 0;
         }
         
-        // Get first selected month (smallest month value)
-        var firstSelectedMonth = null;
+        // Get all selected months
+        var selectedMonths = [];
         monthCheckboxes.forEach(function(cb) {
-            if (cb.checked && !firstSelectedMonth) {
-                firstSelectedMonth = parseInt(cb.value);
+            if (cb.checked) {
+                selectedMonths.push(parseInt(cb.value));
             }
         });
         
         // If no month selected, no discount
-        if (!firstSelectedMonth) {
+        if (selectedMonths.length === 0) {
             return 0;
         }
         
         var totalDiscount = 0;
         
-        // Calculate months difference between billing month and selected month
-        var monthDiff;
-        if (billingYear === currentYear) {
-            monthDiff = billingMonth - firstSelectedMonth;
-        } else if (billingYear > currentYear) {
-            // Next year case (e.g., Dec 2024 to Jan 2025)
-            monthDiff = (12 - firstSelectedMonth + 1) + billingMonth;
-        } else {
-            monthDiff = 0;
-        }
-        
-        // Apply discount based on month difference
-        if (monthDiff === 0) {
-            // Same month payment - full same month discount
-            totalDiscount = sameMonthDiscount;
-        } else if (monthDiff === 1) {
-            // Next month payment - check if within valid day
-            if (billingDay <= validTillDay) {
-                totalDiscount = nextMonthDiscount;
-            } else {
-                totalDiscount = 0;
+        // Calculate discount for each selected month
+        selectedMonths.forEach(function(selectedMonth) {
+            var discount = 0;
+            
+            // SAME MONTH DISCOUNT: payment month == selected month
+            if (billingMonth === selectedMonth) {
+                discount = sameMonthDiscount; // ₹40
             }
-        } else if (monthDiff > 1) {
-            // Multiple months late - same month discount + (months-1) * next month discount
-            totalDiscount = sameMonthDiscount + ((monthDiff - 1) * nextMonthDiscount);
-        }
+            // NEXT MONTH DISCOUNT: payment month == selected month + 1 AND day <= 7
+            else {
+                // Calculate next month of the selected month
+                var nextMonth = selectedMonth + 1;
+                var nextMonthYear = billingYear;
+                
+                // Handle year boundary (December to January)
+                if (selectedMonth === 12) {
+                    nextMonth = 1;
+                    nextMonthYear = billingYear + 1;
+                }
+                
+                // Check if billing is in next month AND before or on day 7
+                if (billingMonth === nextMonth && billingDay <= 7) {
+                    discount = nextMonthDiscount; // ₹10
+                }
+                // Otherwise no discount
+                else {
+                    discount = 0;
+                }
+            }
+            
+            totalDiscount += discount;
+        });
         
         return totalDiscount;
     }
