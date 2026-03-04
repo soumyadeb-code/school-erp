@@ -90,7 +90,13 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">Discount (₹):</label>
-                        <input type="number" class="form-control" id="discount" value="0" min="0" step="0.01">
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="discount" value="0" min="0" step="0.01" readonly>
+                            <button type="button" class="btn btn-info" id="applyCustomDiscountBtn" title="Apply Custom Discount">
+                                <i class="fas fa-tag"></i> Custom
+                            </button>
+                        </div>
+                        <small class="text-muted" id="autoDiscountInfo"></small>
                     </div>
                     
                     <label class="form-label">Select Month:</label>
@@ -103,12 +109,11 @@
                             <?php
                             $isPaid = in_array($index + 1, $paidMonths);
                             ?>
-                            <div class="form-check col-6 month-wrapper" data-index="<?php echo e($index); ?>" style="<?php echo e($isPaid ? 'display: none;' : ''); ?>">
+                            <div class="form-check col-6 month-wrapper" data-index="<?php echo e($index); ?>" data-paid="<?php echo e($isPaid ? '1' : '0'); ?>">
                                 <label class="form-check-label">
                                     <?php if($isPaid): ?>
                                         <input type="checkbox" class="form-check-input" checked disabled>
-                                        <?php echo e($monthName); ?>
-
+                                        <?php echo e($monthName); ?> (Paid)
                                     <?php else: ?>
                                         <input type="checkbox" class="form-check-input month-chk" name="months[]" value="<?php echo e($index + 1); ?>">
                                         <?php echo e($monthName); ?>
@@ -164,6 +169,92 @@ document.addEventListener("DOMContentLoaded", function() {
     var oldDue = parseFloat("<?php echo e($oldDue); ?>") || 0;
     var advance = parseFloat("<?php echo e($advance); ?>") || 0;
     
+    // Get discount rule values from PHP
+    var sameMonthDiscount = parseFloat("<?php echo e($discountRule ? $discountRule->same_month_discount : 0); ?>") || 0;
+    var nextMonthDiscount = parseFloat("<?php echo e($discountRule ? $discountRule->next_month_discount : 0); ?>") || 0;
+    var validTillDay = parseInt("<?php echo e($discountRule ? $discountRule->valid_till_day : 10); ?>") || 10;
+    
+    // Get current user role from PHP
+    var userRole = "<?php echo e(auth()->user()->role ?? ''); ?>";
+    var isSchoolAdmin = (userRole === 'school_admin');
+    
+    // Get current date info
+    var currentDate = new Date();
+    var currentMonth = currentDate.getMonth() + 1;
+    var currentYear = currentDate.getFullYear();
+    
+    // Custom discount variable
+    var customDiscount = 0;
+    
+    // Calculate auto discount based on billing date vs first selected month
+    function calculateAutoDiscount() {
+        var billingDate = new Date(paymentDateEl.value);
+        var billingMonth = billingDate.getMonth() + 1;
+        var billingYear = billingDate.getFullYear();
+        var billingDay = billingDate.getDate();
+        
+        // If no discount rule set, return 0
+        if (sameMonthDiscount === 0 && nextMonthDiscount === 0) {
+            return 0;
+        }
+        
+        // Get first selected month (smallest month value)
+        var firstSelectedMonth = null;
+        monthCheckboxes.forEach(function(cb) {
+            if (cb.checked && !firstSelectedMonth) {
+                firstSelectedMonth = parseInt(cb.value);
+            }
+        });
+        
+        // If no month selected, no discount
+        if (!firstSelectedMonth) {
+            return 0;
+        }
+        
+        var totalDiscount = 0;
+        
+        // Calculate months difference between billing month and selected month
+        var monthDiff;
+        if (billingYear === currentYear) {
+            monthDiff = billingMonth - firstSelectedMonth;
+        } else if (billingYear > currentYear) {
+            // Next year case (e.g., Dec 2024 to Jan 2025)
+            monthDiff = (12 - firstSelectedMonth + 1) + billingMonth;
+        } else {
+            monthDiff = 0;
+        }
+        
+        // Apply discount based on month difference
+        if (monthDiff === 0) {
+            // Same month payment - full same month discount
+            totalDiscount = sameMonthDiscount;
+        } else if (monthDiff === 1) {
+            // Next month payment - check if within valid day
+            if (billingDay <= validTillDay) {
+                totalDiscount = nextMonthDiscount;
+            } else {
+                totalDiscount = 0;
+            }
+        } else if (monthDiff > 1) {
+            // Multiple months late - same month discount + (months-1) * next month discount
+            totalDiscount = sameMonthDiscount + ((monthDiff - 1) * nextMonthDiscount);
+        }
+        
+        return totalDiscount;
+    }
+    
+    // Update auto discount info text
+    function updateAutoDiscountInfo() {
+        var infoEl = document.getElementById('autoDiscountInfo');
+        var autoDiscount = calculateAutoDiscount();
+        
+        if (autoDiscount > 0) {
+            infoEl.textContent = 'Auto Discount: ₹' + autoDiscount.toFixed(2);
+        } else {
+            infoEl.textContent = '';
+        }
+    }
+    
     // Get elements
     var subTotalEl = document.getElementById('subTotal');
     var totalAmountEl = document.getElementById('totalAmount');
@@ -174,9 +265,48 @@ document.addEventListener("DOMContentLoaded", function() {
     var paymentDateEl = document.getElementById('paymentDate');
     var monthCheckboxes = document.querySelectorAll('.month-chk');
     var paymentOptions = document.getElementsByName('paymentOption');
+    var monthWrappers = document.querySelectorAll('.month-wrapper');
+    var customDiscountBtn = document.getElementById('applyCustomDiscountBtn');
     
     // Set today's date
     paymentDateEl.value = new Date().toISOString().split('T')[0];
+    
+    // Show/hide custom discount button based on role
+    if (!isSchoolAdmin) {
+        customDiscountBtn.style.display = 'none';
+    }
+    
+    // Custom discount button click handler
+    customDiscountBtn.addEventListener('click', function() {
+        var customAmount = prompt('Enter custom discount amount (₹):', '0');
+        if (customAmount !== null) {
+            customDiscount = parseFloat(customAmount) || 0;
+            if (customDiscount < 0) customDiscount = 0;
+            calculate();
+        }
+    });
+    
+    // Initialize months visibility - hide all unpaid months initially
+    function initializeMonths() {
+        var firstUnpaidFound = false;
+        
+        monthWrappers.forEach(function(wrapper) {
+            var isPaid = wrapper.dataset.paid === '1';
+            
+            if (isPaid) {
+                // Paid months - show as disabled
+                wrapper.style.display = 'block';
+            } else {
+                // Unpaid months - hide all initially
+                if (!firstUnpaidFound) {
+                    wrapper.style.display = 'block';
+                    firstUnpaidFound = true;
+                } else {
+                    wrapper.style.display = 'none';
+                }
+            }
+        });
+    }
     
     // Calculate function - calculates cumulative fee based on each selected month
     function calculate() {
@@ -193,18 +323,25 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
         
-        // Get discount
-        var discount = parseFloat(discountEl.value) || 0;
+        // Get auto discount from discount rule
+        var autoDiscount = calculateAutoDiscount();
+        
+        // Total discount = auto discount + custom discount
+        var totalDiscount = autoDiscount + customDiscount;
         
         // Sub total is cumulative - adds up for each selected month
         var subTotalVal = cumulativeSubTotal;
         
         // Calculate total
-        var total = subTotalVal + oldDue - advance - discount;
+        var total = subTotalVal + oldDue - advance - totalDiscount;
         
         // Update display
         subTotalEl.value = subTotalVal.toFixed(2);
+        discountEl.value = totalDiscount.toFixed(2);
         totalAmountEl.value = total.toFixed(2);
+        
+        // Update auto discount info
+        updateAutoDiscountInfo();
         
         // Get amount paid
         var paid = parseFloat(amountPaidEl.value) || 0;
@@ -220,7 +357,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
     
-    // Month checkbox change - shows next month BLANK when current is checked
+    // Month checkbox change - shows next month when current is checked
     monthCheckboxes.forEach(function(cb) {
         cb.addEventListener('change', function() {
             var idx = parseInt(this.closest('.month-wrapper').dataset.index);
@@ -232,17 +369,36 @@ document.addEventListener("DOMContentLoaded", function() {
                     var nextWrapper = wrappers[idx + 1];
                     var nextCb = nextWrapper.querySelector('input');
                     
-                    // Always show the next month wrapper
-                    nextWrapper.style.display = 'block';
+                    // Check if next month is already paid
+                    var isNextPaid = nextWrapper.dataset.paid === '1';
                     
-                    // Enable the checkbox if it's disabled
-                    if (nextCb && nextCb.disabled) {
-                        nextCb.disabled = false;
-                    }
-                    
-                    // Keep it blank/unchecked
-                    if (nextCb) {
-                        nextCb.checked = false;
+                    if (isNextPaid) {
+                        // If next month is paid, skip to find first unpaid month after this
+                        for (var i = idx + 1; i < wrappers.length; i++) {
+                            var futureWrapper = wrappers[i];
+                            if (futureWrapper.dataset.paid === '0') {
+                                futureWrapper.style.display = 'block';
+                                var futureCb = futureWrapper.querySelector('input');
+                                if (futureCb) {
+                                    futureCb.disabled = false;
+                                    futureCb.checked = false;
+                                }
+                                break;
+                            }
+                        }
+                    } else {
+                        // Next month is unpaid - show it
+                        nextWrapper.style.display = 'block';
+                        
+                        // Enable the checkbox if it's disabled
+                        if (nextCb && nextCb.disabled) {
+                            nextCb.disabled = false;
+                        }
+                        
+                        // Keep it blank/unchecked
+                        if (nextCb) {
+                            nextCb.checked = false;
+                        }
                     }
                 }
             } else {
@@ -265,8 +421,8 @@ document.addEventListener("DOMContentLoaded", function() {
     // Amount paid change
     amountPaidEl.addEventListener('input', calculate);
     
-    // Discount change
-    discountEl.addEventListener('input', calculate);
+    // Payment date change - recalculate auto discount
+    paymentDateEl.addEventListener('change', calculate);
     
     // Payment option change
     for (var i = 0; i < paymentOptions.length; i++) {
@@ -280,6 +436,9 @@ document.addEventListener("DOMContentLoaded", function() {
             calculate();
         });
     }
+    
+    // Initialize months visibility on page load
+    initializeMonths();
     
     // Initial calculation
     calculate();
